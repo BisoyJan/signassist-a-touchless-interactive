@@ -1,0 +1,205 @@
+================================================================================
+  SignAssist — Full Setup Guide
+  Touchless FSL Sign Language Recognition & Text-to-Speech System
+================================================================================
+
+PREREQUISITES
+--------------------------------------------------------------------------------
+  - Node.js >= 18 (recommended: 20 LTS or later)
+  - npm (comes with Node.js)
+  - Python >= 3.10 (for model training only)
+  - Git
+  - A webcam (for live gesture recognition and data collection)
+  - Google Chrome (recommended for kiosk deployment)
+
+
+================================================================================
+  STEP 1: Clone the Repository
+================================================================================
+
+  git clone https://github.com/<your-username>/SignAssist-A-Touchless-Interactive.git
+  cd SignAssist-A-Touchless-Interactive
+
+
+================================================================================
+  STEP 2: Install Node.js Dependencies
+================================================================================
+
+  npm install
+
+  This installs Next.js, React, TailwindCSS, MediaPipe, TensorFlow.js, etc.
+
+
+================================================================================
+  STEP 3: Run the Development Server
+================================================================================
+
+  npm run dev
+
+  - Open http://localhost:3000 in Chrome
+  - Allow camera permissions when prompted
+  - The main kiosk page will load at /
+  - The data collection page is at /collect
+
+
+================================================================================
+  STEP 4: Collect Training Data
+================================================================================
+
+  1. Open http://localhost:3000/collect in Chrome
+  2. Select a sign label from the vocabulary list
+  3. Perform the sign in front of the webcam
+  4. The app records 30 frames of hand landmarks per sample
+  5. Collect at least 50-100 samples per sign for good accuracy
+  6. Click "Download Samples" to save the JSON file
+  7. Place the downloaded JSON file(s) in the training/data/ folder
+
+
+================================================================================
+  STEP 5: Set Up Python Environment (for Training)
+================================================================================
+
+  a) Navigate to the training folder:
+
+     cd training
+
+  b) Create a virtual environment:
+
+     python -m venv .venv
+
+  c) Activate the virtual environment:
+
+     Windows (Command Prompt):
+       .venv\Scripts\activate
+
+     Windows (PowerShell):
+       .venv\Scripts\Activate.ps1
+
+     macOS / Linux:
+       source .venv/bin/activate
+
+  d) Install Python dependencies:
+
+     pip install -r requirements.txt
+
+     This installs:
+       - tensorflow >= 2.15.0
+       - tensorflowjs >= 4.17.0
+       - numpy >= 1.24.0
+       - scikit-learn >= 1.3.0
+
+  e) Go back to project root:
+
+     cd ..
+
+
+================================================================================
+  STEP 6: Train the Model
+================================================================================
+
+  Make sure:
+    - The Python virtual environment is activated
+    - You have JSON sample files in training/data/
+
+  Run the training script:
+
+     python training/train_model.py
+
+  What the script does:
+    1. Loads all JSON sample files from training/data/
+    2. Builds a Bidirectional LSTM model
+    3. Trains with early stopping and learning rate reduction
+    4. Evaluates on a held-out test set
+    5. Saves the Keras model to training/model.keras
+    6. Converts to TensorFlow.js format in public/models/lstm/
+    7. Copies labels.json to public/models/lstm/
+
+  After training, the model files will be at:
+    public/models/lstm/model.json       (TF.js model)
+    public/models/lstm/labels.json      (class labels)
+    public/models/lstm/group1-shard*.bin (model weights)
+
+
+================================================================================
+  STEP 7: Build for Production (Static Export)
+================================================================================
+
+  npm run build
+
+  This generates a fully static export in the out/ folder.
+  No server required — just serve the out/ folder with any static file server.
+
+
+================================================================================
+  STEP 8: Deploy as Kiosk
+================================================================================
+
+  Option A — Chrome Kiosk Mode (recommended):
+
+    chrome --kiosk --disable-pinch --overscroll-history-navigation=0 http://localhost:3000
+
+  Option B — Serve the static build:
+
+    npx serve out
+    chrome --kiosk http://localhost:3000
+
+  Option C — Deploy to any static hosting (Vercel, Netlify, GitHub Pages, etc.):
+
+    Upload the contents of the out/ folder.
+
+
+================================================================================
+  PROJECT STRUCTURE OVERVIEW
+================================================================================
+
+  src/app/page.tsx             — Main kiosk page
+  src/app/collect/page.tsx     — Data collection tool
+  src/hooks/useHandTracker.ts  — MediaPipe hand detection & webcam
+  src/hooks/useGestureClassifier.ts — TF.js LSTM inference
+  src/hooks/useSpeechOutput.ts — Web Speech API TTS
+  src/components/              — UI components
+  src/config/index.ts          — FSL vocabulary & system config
+  training/train_model.py      — Python training pipeline
+  training/data/               — Training sample JSON files
+  public/models/lstm/          — TF.js model files (output of training)
+
+
+================================================================================
+  USEFUL COMMANDS QUICK REFERENCE
+================================================================================
+
+  npm install                        — Install Node.js dependencies
+  npm run dev                        — Start development server
+  npm run build                      — Build static export to out/
+  npm run lint                       — Run ESLint
+
+  cd training
+  python -m venv .venv               — Create Python virtual environment
+  .venv\Scripts\activate             — Activate venv (Windows CMD)
+  pip install -r requirements.txt    — Install Python training dependencies
+  python train_model.py              — Train the LSTM model
+  deactivate                         — Deactivate the virtual environment
+
+
+================================================================================
+  TROUBLESHOOTING
+================================================================================
+
+  Camera not working?
+    - Make sure Chrome has camera permissions
+    - Check that no other app is using the webcam
+
+  Model not loading in the browser?
+    - Ensure public/models/lstm/model.json exists
+    - Re-run: python training/train_model.py
+
+  Low accuracy?
+    - Collect more samples (100+ per sign recommended)
+    - Ensure consistent hand positioning during data collection
+    - Check that lighting conditions are adequate
+
+  Python/TensorFlow issues?
+    - Use Python 3.10-3.12 (TensorFlow compatibility)
+    - Make sure the virtual environment is activated before installing
+
+================================================================================
