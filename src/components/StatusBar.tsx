@@ -1,6 +1,7 @@
 "use client";
 
 import type { SystemStatus, InteractionMode } from "@/types";
+import ThemeToggle from "./ThemeToggle";
 
 interface StatusBarProps {
     status: SystemStatus;
@@ -38,7 +39,7 @@ export default function StatusBar({
     const statusInfo = STATUS_LABELS[status];
 
     return (
-        <div className="flex items-center justify-between px-6 py-3 bg-gray-900/80 border-t border-gray-700/50">
+        <div className="flex items-center justify-between px-6 py-3 bg-th-surface/80 border-t border-th-border/50">
             {/* Left: System status */}
             <div className="flex items-center gap-3">
                 <div
@@ -75,13 +76,13 @@ export default function StatusBar({
             </div>
 
             {/* Center: Model status */}
-            <div className="text-xs text-gray-500">
+            <div className="text-xs text-th-text-4">
                 {isModelLoaded ? (
                     <span className="text-green-500" title={modelInfo ?? undefined}>● Model loaded{modelInfo ? ` (${modelInfo})` : ""}</span>
                 ) : modelError ? (
                     <span className="text-yellow-500">⚠ Demo mode</span>
                 ) : (
-                    <span className="text-gray-500">Loading model...</span>
+                    <span className="text-th-text-4">Loading model...</span>
                 )}
             </div>
 
@@ -92,7 +93,7 @@ export default function StatusBar({
                     className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
                         mode === "sign"
                             ? "bg-green-600/30 text-green-300 border-green-500/50"
-                            : "bg-gray-800/50 text-gray-400 border-gray-600/50 hover:bg-gray-700/50"
+                            : "bg-th-surface-2/50 text-th-text-3 border-th-border-2/50 hover:bg-th-surface-3/50"
                     }`}
                     data-hand-nav
                     title="Motion-trained model (✊+👍)"
@@ -104,7 +105,7 @@ export default function StatusBar({
                     className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
                         mode === "spelling"
                             ? "bg-sky-600/30 text-sky-300 border-sky-500/50"
-                            : "bg-gray-800/50 text-gray-400 border-gray-600/50 hover:bg-gray-700/50"
+                            : "bg-th-surface-2/50 text-th-text-3 border-th-border-2/50 hover:bg-th-surface-3/50"
                     }`}
                     data-hand-nav
                     title="Spelling mode (👍👍)"
@@ -116,7 +117,7 @@ export default function StatusBar({
                     className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
                         mode === "navigate"
                             ? "bg-purple-600/30 text-purple-300 border-purple-500/50"
-                            : "bg-gray-800/50 text-gray-400 border-gray-600/50 hover:bg-gray-700/50"
+                            : "bg-th-surface-2/50 text-th-text-3 border-th-border-2/50 hover:bg-th-surface-3/50"
                     }`}
                     data-hand-nav
                     title="Navigation mode (✊✊)"
@@ -125,12 +126,13 @@ export default function StatusBar({
                 </button>
                 <button
                     onClick={onToggleLanguage}
-                    className="px-3 py-1 bg-gray-800 border border-gray-600 rounded-lg text-sm text-white hover:bg-gray-700 transition-colors"
+                    className="px-3 py-1 bg-th-surface-2 border border-th-border-2 rounded-lg text-sm text-th-fg hover:bg-th-surface-3 transition-colors"
                     data-hand-nav
                 >
                     {language === "en" ? "🇺🇸 EN" : "🇵🇭 FIL"}
                 </button>
-                <span className="text-xs text-gray-600 font-mono">SignAssist v1.0</span>
+                <ThemeToggle />
+                <span className="text-xs text-th-text-5 font-mono">SignAssist v1.0</span>
             </div>
         </div>
     );

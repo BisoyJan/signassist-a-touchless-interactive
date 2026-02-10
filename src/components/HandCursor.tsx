@@ -36,7 +36,7 @@ export default function HandCursor({ cursor, mode, holdProgress, holdTarget, cur
       <div className="fixed inset-0 z-[9999] pointer-events-none" aria-hidden="true">
         <div className="absolute top-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
           <ProgressRing progress={holdProgress} color={style.color} emoji={style.emoji} />
-          <span className={`text-xs ${style.textClass} bg-gray-900/80 px-2 py-0.5 rounded`}>
+          <span className={`text-xs ${style.textClass} bg-th-surface/80 px-2 py-0.5 rounded`}>
             Switch to {style.label}
           </span>
         </div>
@@ -52,7 +52,7 @@ export default function HandCursor({ cursor, mode, holdProgress, holdTarget, cur
       <div className="fixed inset-0 z-[9999] pointer-events-none" aria-hidden="true">
         <div className="absolute top-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
           <ProgressRing progress={holdProgress} color={style.color} emoji={style.emoji} />
-          <span className={`text-xs ${style.textClass} bg-gray-900/80 px-2 py-0.5 rounded`}>
+          <span className={`text-xs ${style.textClass} bg-th-surface/80 px-2 py-0.5 rounded`}>
             Switch to {style.label}
           </span>
         </div>
@@ -131,7 +131,7 @@ export default function HandCursor({ cursor, mode, holdProgress, holdTarget, cur
         return (
           <div className="absolute top-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
             <ProgressRing progress={holdProgress} color={style.color} emoji={style.emoji} />
-            <span className={`text-xs ${style.textClass} bg-gray-900/80 px-2 py-0.5 rounded`}>
+            <span className={`text-xs ${style.textClass} bg-th-surface/80 px-2 py-0.5 rounded`}>
               Switch to {style.label}
             </span>
           </div>
@@ -148,7 +148,7 @@ function ProgressRing({ progress, color, emoji }: { progress: number; color: str
   return (
     <div className="relative w-16 h-16">
       <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
-        <circle cx="32" cy="32" r={r} fill="none" stroke="#374151" strokeWidth="4" />
+        <circle cx="32" cy="32" r={r} fill="none" stroke="var(--color-th-border)" strokeWidth="4" />
         <circle
           cx="32" cy="32" r={r}
           fill="none"

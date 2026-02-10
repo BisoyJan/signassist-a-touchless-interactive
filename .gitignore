@@ -43,6 +43,7 @@ next-env.d.ts
 # Python
 training/.venv/
 training/data/*.json
+training/videos
 training/__pycache__/
 __pycache__/
 *.pyc

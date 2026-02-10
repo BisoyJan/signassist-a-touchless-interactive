@@ -30,7 +30,7 @@ export default function SpellingDisplay({
 
   return (
     <div className="fixed inset-x-0 top-4 flex justify-center z-50 pointer-events-none">
-      <div className="bg-gray-800/95 backdrop-blur-sm border border-cyan-400/30 rounded-2xl px-8 py-5 shadow-2xl pointer-events-auto max-w-2xl">
+      <div className="bg-th-surface-2/95 backdrop-blur-sm border border-cyan-400/30 rounded-2xl px-8 py-5 shadow-2xl pointer-events-auto max-w-2xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -40,7 +40,7 @@ export default function SpellingDisplay({
             <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
           </div>
           {countdown !== null && (
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-th-text-3">
               Auto-confirm in {countdown}s
             </span>
           )}
@@ -57,7 +57,7 @@ export default function SpellingDisplay({
           {letters.map((letter, i) => (
             <span
               key={`${i}-${letter}`}
-              className="inline-flex items-center justify-center w-12 h-14 bg-cyan-500/10 border border-cyan-400/40 rounded-lg text-2xl font-bold text-white animate-[fadeIn_0.2s_ease-out]"
+              className="inline-flex items-center justify-center w-12 h-14 bg-cyan-500/10 border border-cyan-400/40 rounded-lg text-2xl font-bold text-th-fg animate-[fadeIn_0.2s_ease-out]"
             >
               {letter}
             </span>
@@ -70,9 +70,9 @@ export default function SpellingDisplay({
 
         {/* Word preview */}
         <div className="mt-3 flex items-center justify-between">
-          <p className="text-lg text-gray-300">
+          <p className="text-lg text-th-text-2">
             Word:{" "}
-            <span className="text-white font-semibold">
+            <span className="text-th-fg font-semibold">
               {letters.join("")}
             </span>
           </p>

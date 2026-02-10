@@ -35,6 +35,7 @@ export default function KioskPage() {
   );
   const [confidence, setConfidence] = useState<number | null>(null);
   const [spellingNotice, setSpellingNotice] = useState<string | null>(null);
+  const [cameraEnabled, setCameraEnabled] = useState(true);
 
   // ── Hooks ─────────────────────────────────────────────────
   const {
@@ -224,6 +225,7 @@ export default function KioskPage() {
   const {
     initialize: initHandTracker,
     startTracking,
+    stopTracking,
     isLoading: isHandTrackerLoading,
     isTracking,
     error: handTrackerError,
@@ -232,6 +234,21 @@ export default function KioskPage() {
     minDetectionConfidence: DEFAULT_CONFIG.handDetectionConfidence,
     minTrackingConfidence: DEFAULT_CONFIG.handTrackingConfidence,
   });
+
+  // ── Camera on/off toggle ──────────────────────────────────
+  const toggleCamera = useCallback(() => {
+    if (cameraEnabled) {
+      stopTracking();
+      setCameraEnabled(false);
+      setStatus("ready");
+    } else {
+      setCameraEnabled(true);
+      // startTracking re-initializes MediaPipe if needed
+      if (videoRef.current && canvasRef.current) {
+        startTracking(videoRef.current, canvasRef.current);
+      }
+    }
+  }, [cameraEnabled, stopTracking, startTracking]);
 
   // ── Initialization ────────────────────────────────────────
   useEffect(() => {
@@ -245,9 +262,10 @@ export default function KioskPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Start tracking once hand tracker is ready
+  // Start tracking once hand tracker is ready (only if camera is enabled)
   useEffect(() => {
     if (
+      cameraEnabled &&
       !isHandTrackerLoading &&
       !isTracking &&
       videoRef.current &&
@@ -256,7 +274,7 @@ export default function KioskPage() {
     ) {
       startTracking(videoRef.current, canvasRef.current);
     }
-  }, [isHandTrackerLoading, isTracking, startTracking, status]);
+  }, [isHandTrackerLoading, isTracking, startTracking, status, cameraEnabled]);
 
   // Run classification at regular intervals (all modes — LSTM detects mode gestures too)
   useEffect(() => {
@@ -312,13 +330,13 @@ export default function KioskPage() {
   // ── Error state ───────────────────────────────────────────
   if (handTrackerError) {
     return (
-      <div className="h-screen bg-gray-950 flex items-center justify-center">
+      <div className="h-screen bg-th-bg flex items-center justify-center">
         <div className="text-center max-w-md px-6">
           <div className="text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-white mb-2">
+          <h1 className="text-2xl font-bold text-th-fg mb-2">
             Camera Access Required
           </h1>
-          <p className="text-gray-400 mb-6">{handTrackerError}</p>
+          <p className="text-th-text-3 mb-6">{handTrackerError}</p>
           <button
             onClick={() => window.location.reload()}
             className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-500 transition-colors"
@@ -333,7 +351,7 @@ export default function KioskPage() {
 
   // ── Render ────────────────────────────────────────────────
   return (
-    <div className="h-screen flex flex-col bg-gray-950 overflow-hidden select-none">
+    <div className="h-screen flex flex-col bg-th-bg overflow-hidden select-none">
       {/* Main content area */}
       <div className="flex-1 flex flex-col lg:flex-row gap-2 p-3">
         {/* Camera feed — top/left 60% */}
@@ -342,11 +360,13 @@ export default function KioskPage() {
             videoRef={videoRef}
             canvasRef={canvasRef}
             isTracking={isTracking}
+            cameraEnabled={cameraEnabled}
+            onToggleCamera={toggleCamera}
           />
         </div>
 
         {/* Translation panel — bottom/right 40% */}
-        <div className="flex-[2] min-h-0 bg-gray-900/50 rounded-xl border border-gray-800">
+        <div className="flex-[2] min-h-0 bg-th-surface/50 rounded-xl border border-th-border">
           <TranslationDisplay
             currentTranslation={currentTranslation}
             confidence={confidence}

@@ -50,10 +50,10 @@ export default function ConfirmationPanel({
 
     return (
         <div className="fixed inset-x-0 bottom-24 flex justify-center z-50 pointer-events-none">
-            <div className="bg-gray-800/95 backdrop-blur-sm border border-green-400/30 rounded-2xl px-8 py-5 shadow-2xl pointer-events-auto max-w-lg text-center">
+            <div className="bg-th-surface-2/95 backdrop-blur-sm border border-green-400/30 rounded-2xl px-8 py-5 shadow-2xl pointer-events-auto max-w-lg text-center">
                 {/* Confirmation text */}
-                <p className="text-lg text-gray-300 mb-1">Did you sign:</p>
-                <p className="text-3xl font-bold text-white mb-4">&quot;{text}&quot;</p>
+                <p className="text-lg text-th-text-2 mb-1">Did you sign:</p>
+                <p className="text-3xl font-bold text-th-fg mb-4">&quot;{text}&quot;</p>
 
                 {/* Countdown ring */}
                 <div className="flex items-center justify-center gap-6">
@@ -64,7 +64,7 @@ export default function ConfirmationPanel({
                                 cy="28"
                                 r="24"
                                 fill="none"
-                                stroke="#374151"
+                                stroke="var(--color-th-border)"
                                 strokeWidth="4"
                             />
                             <circle
@@ -82,7 +82,7 @@ export default function ConfirmationPanel({
                                 className="transition-all duration-1000 ease-linear"
                             />
                         </svg>
-                        <span className="absolute inset-0 flex items-center justify-center text-lg font-bold text-white">
+                        <span className="absolute inset-0 flex items-center justify-center text-lg font-bold text-th-fg">
                             {countdown}
                         </span>
                     </div>
@@ -96,7 +96,7 @@ export default function ConfirmationPanel({
                     </button>
                 </div>
 
-                <p className="text-xs text-gray-500 mt-3">
+                <p className="text-xs text-th-text-4 mt-3">
                     Auto-confirming in {countdown}s — or show{" "}
                     <span className="text-yellow-400">open palm</span> to cancel
                 </p>

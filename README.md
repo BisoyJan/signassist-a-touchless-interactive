@@ -80,6 +80,10 @@ Important: if you serve the app from a different host/device, use `https://` (or
 
 ### 1. Collect Samples
 
+You can collect training data using **either or both** methods:
+
+#### Option A: Live Collection (via `/collect` page)
+
 Visit `/collect` in the dev server to record sign language gesture samples. For each sign:
 - Select the sign label
 - Enter the signer's name
@@ -87,14 +91,47 @@ Visit `/collect` in the dev server to record sign language gesture samples. For 
 - Click "Start Recording" and perform the gesture
 - Repeat 50–100 times per sign, across 3–5 different signers
 
-Download the JSON file when done.
+Download the JSON file when done and place it in `training/data/`.
+
+#### Option B: Extract from Video Files
+
+Record short (2–5 second) video clips of each gesture and organize them by label:
+
+```
+training/videos/
+  hello/
+    clip1.mp4
+    clip2.mp4
+  thank_you/
+    clip1.mp4
+  letter_a/
+    clip1.mp4
+```
+
+Then extract hand landmarks using MediaPipe:
+
+```bash
+cd training
+python extract_from_video.py --videos_dir ./videos
+
+# With data augmentation (recommended — produces 3× more samples):
+python extract_from_video.py --videos_dir ./videos --augment
+```
+
+This outputs a JSON file to `training/data/video_samples.json` in the same format as the `/collect` page, so both sources are combined automatically during training.
+
+Recording tips:
+- 10+ clips per gesture for good accuracy
+- Same camera angle as the kiosk (front-facing, chest-up)
+- Vary lighting conditions (bright + dim)
+- Add an `unknown/` folder with random non-gesture movements
 
 ### 2. Train the LSTM
 
 ```bash
 cd training
 pip install -r requirements.txt
-# Place your collected JSON files in training/data/
+# Place your collected JSON files and/or video-extracted samples in training/data/
 python train_model.py
 ```
 
@@ -144,8 +181,10 @@ signassist/
 │       └── index.ts              # TypeScript interfaces
 ├── training/
 │   ├── train_model.py            # Python LSTM training pipeline
+│   ├── extract_from_video.py     # Extract landmarks from video files
 │   ├── requirements.txt          # Python dependencies
-│   └── data/                     # Place collected JSON samples here
+│   ├── data/                     # Place collected JSON samples here
+│   └── videos/                   # Video files organized by gesture label
 ├── public/
 │   └── models/lstm/              # Exported TF.js model (after training)
 ├── next.config.ts                # Static export configuration

@@ -40,6 +40,7 @@ export default function CollectPage() {
     const [isAutoRecording, setIsAutoRecording] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [countdown, setCountdown] = useState(0);
+    const [cameraEnabled, setCameraEnabled] = useState(true);
     const autoRecordRef = useRef({ active: false, target: 0, current: 0 });
     const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -100,6 +101,7 @@ export default function CollectPage() {
     const {
         initialize: initHandTracker,
         startTracking,
+        stopTracking,
         isLoading,
         isTracking,
         error,
@@ -107,16 +109,38 @@ export default function CollectPage() {
         onResults: onHandResults,
     });
 
+    const toggleCamera = useCallback(() => {
+        if (cameraEnabled) {
+            stopTracking();
+            setCameraEnabled(false);
+            if (isRecording) {
+                setIsRecording(false);
+                framesRef.current = [];
+                setFrameCount(0);
+            }
+            if (isAutoRecording) {
+                cancelAutoRecording();
+            }
+        } else {
+            setCameraEnabled(true);
+            // startTracking re-initializes MediaPipe if needed
+            if (videoRef.current && canvasRef.current) {
+                startTracking(videoRef.current, canvasRef.current);
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [cameraEnabled, stopTracking, startTracking, isRecording, isAutoRecording]);
+
     useEffect(() => {
         initHandTracker();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
-        if (!isLoading && !isTracking && videoRef.current && canvasRef.current) {
+        if (cameraEnabled && !isLoading && !isTracking && videoRef.current && canvasRef.current) {
             startTracking(videoRef.current, canvasRef.current);
         }
-    }, [isLoading, isTracking, startTracking]);
+    }, [isLoading, isTracking, startTracking, cameraEnabled]);
 
     const startRecording = () => {
         framesRef.current = [];
@@ -198,7 +222,7 @@ export default function CollectPage() {
             clearInterval(timer);
             countdownTimerRef.current = null;
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAutoRecording, isRecording]);
 
     const downloadSamples = () => {
@@ -220,12 +244,12 @@ export default function CollectPage() {
     }, {});
 
     return (
-        <div className="min-h-screen bg-gray-950 text-white p-6 cursor-default">
+        <div className="min-h-screen bg-th-bg text-th-fg p-6 cursor-default">
             <div className="max-w-7xl mx-auto">
                 <h1 className="text-3xl font-bold mb-2">
                     📹 SignAssist — Data Collection
                 </h1>
-                <p className="text-gray-400 mb-6">
+                <p className="text-th-text-3 mb-6">
                     Record sign language gesture samples for training the LSTM model. Each
                     recording captures {sequenceLength} frames of hand landmarks.
                 </p>
@@ -238,13 +262,15 @@ export default function CollectPage() {
                                 videoRef={videoRef}
                                 canvasRef={canvasRef}
                                 isTracking={isTracking}
+                                cameraEnabled={cameraEnabled}
+                                onToggleCamera={toggleCamera}
                             />
                         </div>
                         {/* Auto-record batch progress */}
                         {isAutoRecording && (
-                            <div className={`mt-3 rounded-lg p-3 border ${isPaused ? 'bg-yellow-900/30 border-yellow-700' : 'bg-blue-900/30 border-blue-700'}`}>
+                            <div className={`mt-3 rounded-lg p-3 border ${isPaused ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-blue-500/10 border-blue-500/30'}`}>
                                 <div className="flex items-center justify-between mb-2">
-                                    <span className={`font-medium text-sm ${isPaused ? 'text-yellow-300' : 'text-blue-300'}`}>
+                                    <span className={`font-medium text-sm ${isPaused ? 'text-yellow-600 dark:text-yellow-300' : 'text-blue-600 dark:text-blue-300'}`}>
                                         {isPaused ? '⏸ Paused' : '🔄 Auto-Recording'}: {autoRecordProgress} / {targetSamples} samples
                                     </span>
                                     <div className="flex gap-2">
@@ -271,7 +297,7 @@ export default function CollectPage() {
                                         </button>
                                     </div>
                                 </div>
-                                <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                                <div className="w-full h-2 bg-th-surface-2 rounded-full overflow-hidden">
                                     <div
                                         className="h-full bg-blue-500 rounded-full transition-all"
                                         style={{
@@ -281,7 +307,7 @@ export default function CollectPage() {
                                 </div>
                                 {countdown > 0 && !isRecording && (
                                     <div className="mt-2 text-center">
-                                        <span className="text-yellow-300 text-2xl font-bold animate-pulse">
+                                        <span className="text-yellow-600 dark:text-yellow-300 text-2xl font-bold animate-pulse">
                                             Next sample in {countdown}...
                                         </span>
                                     </div>
@@ -294,14 +320,14 @@ export default function CollectPage() {
                                 <div className="flex items-center gap-3">
                                     <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
                                     <span className="text-red-400 font-medium">Recording...</span>
-                                    <span className="text-gray-400 text-sm">
+                                    <span className="text-th-text-3 text-sm">
                                         {frameCount} / {sequenceLength} frames
                                     </span>
                                     <span className={`text-sm font-medium ${handsDetected >= 2 ? "text-green-400" : "text-yellow-400"}`}>
                                         ✋×{handsDetected}
                                     </span>
                                 </div>
-                                <div className="w-full h-2 bg-gray-800 rounded-full mt-2 overflow-hidden">
+                                <div className="w-full h-2 bg-th-surface-2 rounded-full mt-2 overflow-hidden">
                                     <div
                                         className="h-full bg-red-500 rounded-full transition-all"
                                         // Dynamic width based on recording progress
@@ -318,7 +344,7 @@ export default function CollectPage() {
                     <div className="space-y-4">
                         {/* Category filter */}
                         <div>
-                            <label className="block text-sm text-gray-400 mb-1">
+                            <label className="block text-sm text-th-text-3 mb-1">
                                 Category
                             </label>
                             <select
@@ -330,7 +356,7 @@ export default function CollectPage() {
                                         : SIGN_VOCABULARY.filter((s) => s.category === e.target.value);
                                     if (filtered.length > 0) setSelectedSign(filtered[0].label);
                                 }}
-                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                                className="w-full bg-th-surface-2 border border-th-border rounded-lg px-3 py-2 text-th-fg"
                                 disabled={isRecording}
                                 aria-label="Filter signs by category"
                             >
@@ -344,13 +370,13 @@ export default function CollectPage() {
 
                         {/* Sign selector */}
                         <div>
-                            <label className="block text-sm text-gray-400 mb-1">
+                            <label className="block text-sm text-th-text-3 mb-1">
                                 Sign Label
                             </label>
                             <select
                                 value={selectedSign}
                                 onChange={(e) => setSelectedSign(e.target.value)}
-                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                                className="w-full bg-th-surface-2 border border-th-border rounded-lg px-3 py-2 text-th-fg"
                                 disabled={isRecording}
                                 aria-label="Select sign label to record"
                             >
@@ -364,7 +390,7 @@ export default function CollectPage() {
 
                         {/* Signer name */}
                         <div>
-                            <label className="block text-sm text-gray-400 mb-1">
+                            <label className="block text-sm text-th-text-3 mb-1">
                                 Signer Name
                             </label>
                             <input
@@ -372,16 +398,16 @@ export default function CollectPage() {
                                 value={signerName}
                                 onChange={(e) => setSignerName(e.target.value)}
                                 placeholder="e.g., Maria"
-                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                                className="w-full bg-th-surface-2 border border-th-border rounded-lg px-3 py-2 text-th-fg"
                                 disabled={isRecording}
                             />
                         </div>
 
                         {/* Frames per sample */}
                         <div>
-                            <label className="block text-sm text-gray-400 mb-1">
-                                Frames per Sample: <span className="text-white font-medium">{sequenceLength}</span>
-                                <span className="text-gray-500 ml-1">(≈{(sequenceLength / 30).toFixed(1)}s)</span>
+                            <label className="block text-sm text-th-text-3 mb-1">
+                                Frames per Sample: <span className="text-th-fg font-medium">{sequenceLength}</span>
+                                <span className="text-th-text-4 ml-1">(≈{(sequenceLength / 30).toFixed(1)}s)</span>
                             </label>
                             <input
                                 type="range"
@@ -394,7 +420,7 @@ export default function CollectPage() {
                                 disabled={isRecording}
                                 aria-label="Frames per sample"
                             />
-                            <div className="flex justify-between text-xs text-gray-600 mt-0.5">
+                            <div className="flex justify-between text-xs text-th-text-5 mt-0.5">
                                 <span>15 (0.5s)</span>
                                 <span>30 (1s)</span>
                                 <span>60 (2s)</span>
@@ -404,7 +430,7 @@ export default function CollectPage() {
 
                         {/* Lighting condition */}
                         <div>
-                            <label className="block text-sm text-gray-400 mb-1">
+                            <label className="block text-sm text-th-text-3 mb-1">
                                 Lighting
                             </label>
                             <div className="flex gap-2">
@@ -414,8 +440,8 @@ export default function CollectPage() {
                                         onClick={() => setLighting(l)}
                                         disabled={isRecording}
                                         className={`flex-1 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${lighting === l
-                                                ? "bg-green-600 border-green-500 text-white"
-                                                : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600"
+                                            ? "bg-green-600 border-green-500 text-white"
+                                            : "bg-th-surface-2 border-th-border text-th-text-3 hover:border-th-border-2"
                                             }`}
                                     >
                                         {l}
@@ -426,8 +452,8 @@ export default function CollectPage() {
 
                         {/* Delay between samples */}
                         <div>
-                            <label className="block text-sm text-gray-400 mb-1">
-                                Delay Between Samples: <span className="text-white font-medium">{delayBetween}s</span>
+                            <label className="block text-sm text-th-text-3 mb-1">
+                                Delay Between Samples: <span className="text-th-fg font-medium">{delayBetween}s</span>
                             </label>
                             <input
                                 type="range"
@@ -440,7 +466,7 @@ export default function CollectPage() {
                                 disabled={isRecording || isAutoRecording}
                                 aria-label="Delay between samples in seconds"
                             />
-                            <div className="flex justify-between text-xs text-gray-600 mt-0.5">
+                            <div className="flex justify-between text-xs text-th-text-5 mt-0.5">
                                 <span>0s (instant)</span>
                                 <span>5s</span>
                                 <span>10s</span>
@@ -449,8 +475,8 @@ export default function CollectPage() {
 
                         {/* Number of samples to auto-record */}
                         <div>
-                            <label className="block text-sm text-gray-400 mb-1">
-                                Samples to Record: <span className="text-white font-medium">{targetSamples}</span>
+                            <label className="block text-sm text-th-text-3 mb-1">
+                                Samples to Record: <span className="text-th-fg font-medium">{targetSamples}</span>
                             </label>
                             <input
                                 type="number"
@@ -458,7 +484,7 @@ export default function CollectPage() {
                                 max={400}
                                 value={targetSamples}
                                 onChange={(e) => setTargetSamples(Math.max(1, Math.min(400, Number(e.target.value) || 1)))}
-                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                                className="w-full bg-th-surface-2 border border-th-border rounded-lg px-3 py-2 text-th-fg"
                                 disabled={isRecording || isAutoRecording}
                                 aria-label="Number of samples to auto-record"
                             />
@@ -470,8 +496,8 @@ export default function CollectPage() {
                                 onClick={startRecording}
                                 disabled={isRecording || isAutoRecording || !isTracking}
                                 className={`flex-1 py-3 rounded-lg font-bold text-sm transition-colors ${isRecording || isAutoRecording
-                                        ? "bg-gray-700 text-gray-400 cursor-not-allowed"
-                                        : "bg-gray-700 text-white hover:bg-gray-600 border border-gray-600"
+                                    ? "bg-th-surface-3 text-th-text-3 cursor-not-allowed"
+                                    : "bg-th-surface-3 text-th-fg hover:bg-th-surface-2 border border-th-border-2"
                                     }`}
                             >
                                 ▶ Record 1
@@ -479,27 +505,26 @@ export default function CollectPage() {
                             <button
                                 onClick={isAutoRecording ? (isPaused ? resumeAutoRecording : pauseAutoRecording) : startAutoRecording}
                                 disabled={(!isAutoRecording && (isRecording || !isTracking))}
-                                className={`flex-[2] py-3 rounded-lg font-bold text-sm transition-colors ${
-                                    isAutoRecording && isPaused
+                                className={`flex-[2] py-3 rounded-lg font-bold text-sm transition-colors ${isAutoRecording && isPaused
                                         ? "bg-green-600 text-white hover:bg-green-500"
                                         : isAutoRecording
-                                        ? "bg-yellow-600 text-white hover:bg-yellow-500"
-                                        : isRecording || !isTracking
-                                        ? "bg-green-800 text-green-300 cursor-not-allowed"
-                                        : "bg-green-600 text-white hover:bg-green-500"
-                                }`}
+                                            ? "bg-yellow-600 text-white hover:bg-yellow-500"
+                                            : isRecording || !isTracking
+                                                ? "bg-green-800 text-green-300 cursor-not-allowed"
+                                                : "bg-green-600 text-white hover:bg-green-500"
+                                    }`}
                             >
                                 {isAutoRecording && isPaused
                                     ? `▶ Resume (${autoRecordProgress}/${targetSamples})`
                                     : isAutoRecording
-                                    ? `⏸ Pause (${autoRecordProgress}/${targetSamples})`
-                                    : `🔄 Auto-Record ${targetSamples} Samples`}
+                                        ? `⏸ Pause (${autoRecordProgress}/${targetSamples})`
+                                        : `🔄 Auto-Record ${targetSamples} Samples`}
                             </button>
                         </div>
 
                         {/* Stats */}
-                        <div className="bg-gray-900 rounded-lg p-4 border border-gray-800">
-                            <h3 className="text-sm font-medium text-gray-400 mb-2">
+                        <div className="bg-th-surface rounded-lg p-4 border border-th-border">
+                            <h3 className="text-sm font-medium text-th-text-3 mb-2">
                                 Collected Samples ({samples.length} total)
                             </h3>
                             <div className="space-y-1 max-h-48 overflow-y-auto">
@@ -508,12 +533,12 @@ export default function CollectPage() {
                                         key={label}
                                         className="flex justify-between text-sm"
                                     >
-                                        <span className="text-gray-300">{label}</span>
+                                        <span className="text-th-text-2">{label}</span>
                                         <span className="text-green-400">{count}</span>
                                     </div>
                                 ))}
                                 {samples.length === 0 && (
-                                    <p className="text-xs text-gray-600">
+                                    <p className="text-xs text-th-text-5">
                                         No samples recorded yet.
                                     </p>
                                 )}
@@ -524,13 +549,13 @@ export default function CollectPage() {
                         <button
                             onClick={downloadSamples}
                             disabled={samples.length === 0}
-                            className="w-full py-2 rounded-lg border border-gray-700 text-gray-300 hover:bg-gray-800 transition-colors disabled:opacity-30"
+                            className="w-full py-2 rounded-lg border border-th-border text-th-text-2 hover:bg-th-surface-2 transition-colors disabled:opacity-30"
                         >
                             💾 Download Samples ({samples.length})
                         </button>
 
                         {error && (
-                            <p className="text-sm text-red-400 bg-red-900/20 rounded-lg p-3">
+                            <p className="text-sm text-red-400 bg-red-500/10 rounded-lg p-3">
                                 {error}
                             </p>
                         )}

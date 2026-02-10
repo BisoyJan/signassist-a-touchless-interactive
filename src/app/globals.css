@@ -1,24 +1,46 @@
 @import "tailwindcss";
 
-:root {
-  --background: #030712;
-  --foreground: #f9fafb;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+/* ── Theme colors (light defaults, overridden in .dark) ── */
+@theme {
+  --color-th-bg: #f8fafc;
+  --color-th-fg: #0f172a;
+  --color-th-surface: #ffffff;
+  --color-th-surface-2: #f1f5f9;
+  --color-th-surface-3: #e2e8f0;
+  --color-th-border: #cbd5e1;
+  --color-th-border-2: #94a3b8;
+  --color-th-text-2: #334155;
+  --color-th-text-3: #475569;
+  --color-th-text-4: #64748b;
+  --color-th-text-5: #94a3b8;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
+
+/* ── Dark overrides ────────────────────────────────────── */
+.dark {
+  --color-th-bg: #030712;
+  --color-th-fg: #f9fafb;
+  --color-th-surface: #111827;
+  --color-th-surface-2: #1f2937;
+  --color-th-surface-3: #374151;
+  --color-th-border: #374151;
+  --color-th-border-2: #4b5563;
+  --color-th-text-2: #d1d5db;
+  --color-th-text-3: #9ca3af;
+  --color-th-text-4: #6b7280;
+  --color-th-text-5: #4b5563;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* Kiosk-optimized global styles */
 html,
 body {
   height: 100%;
   overflow: hidden;
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--color-th-bg);
+  color: var(--color-th-fg);
   font-family: Arial, Helvetica, sans-serif;
   cursor: none; /* hide cursor for kiosk */
   user-select: none;
@@ -43,12 +65,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: var(--color-th-border);
   border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #4b5563;
+  background: var(--color-th-border-2);
 }
 
 /* ── Hand-navigation hover highlight ───────────────────── */
