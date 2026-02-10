@@ -5,6 +5,8 @@ import * as tf from "@tensorflow/tfjs";
 import {
   DEFAULT_CONFIG,
   FEATURES_PER_FRAME,
+  FEATURES_PER_HAND,
+  NUM_HANDS,
   CLASS_LABELS,
 } from "@/config";
 import type { GestureResult, HandFrame } from "@/types";
@@ -32,6 +34,17 @@ export function useGestureClassifier(
   const modelLabelsRef = useRef<string[]>(CLASS_LABELS);
   const bufferRef = useRef<number[][]>([]);
   const isClassifyingRef = useRef(false);
+  /** Consecutive frames with no hand detected — used to clear the buffer. */
+  const noHandCountRef = useRef(0);
+  /** Clear the buffer after this many consecutive empty-hand frames (~0.3s). */
+  const CLEAR_AFTER_EMPTY = 10;
+
+  // Keep a stable ref to onGestureDetected so pushFrame can call it
+  // without re-creating itself on every render.
+  const onGestureDetectedRef = useRef(onGestureDetected);
+  useEffect(() => {
+    onGestureDetectedRef.current = onGestureDetected;
+  }, [onGestureDetected]);
 
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [modelError, setModelError] = useState<string | null>(null);
@@ -106,11 +119,17 @@ export function useGestureClassifier(
     }
   }, [modelUrl, labelsUrl, sequenceLength]);
 
-  // Convert a HandFrame to a flat feature vector (63 floats)
-  const handFrameToFeatures = useCallback((hand: HandFrame): number[] => {
-    const features: number[] = [];
-    for (const lm of hand.landmarks) {
-      features.push(lm.x, lm.y, lm.z);
+  // Convert HandFrame[] to a flat 126-feature vector (2 hands × 63 features)
+  // If only 1 hand detected, the second hand's features are zero-padded.
+  const handsToFeatures = useCallback((hands: HandFrame[]): number[] => {
+    const features = new Array(FEATURES_PER_FRAME).fill(0); // 126 zeros
+    for (let h = 0; h < Math.min(hands.length, NUM_HANDS); h++) {
+      const offset = h * FEATURES_PER_HAND;
+      for (let i = 0; i < hands[h].landmarks.length; i++) {
+        features[offset + i * 3] = hands[h].landmarks[i].x;
+        features[offset + i * 3 + 1] = hands[h].landmarks[i].y;
+        features[offset + i * 3 + 2] = hands[h].landmarks[i].z;
+      }
     }
     return features;
   }, []);
@@ -118,10 +137,21 @@ export function useGestureClassifier(
   // Push a new frame into the sliding buffer
   const pushFrame = useCallback(
     (hands: HandFrame[]) => {
-      if (hands.length === 0) return;
+      if (hands.length === 0) {
+        // Clear the landmark buffer after a short gap so stale frames don't
+        // bleed into the next gesture.
+        noHandCountRef.current++;
+        if (noHandCountRef.current >= CLEAR_AFTER_EMPTY) {
+          bufferRef.current = [];
+        }
+        return;
+      }
 
-      // Use the first detected hand
-      const features = handFrameToFeatures(hands[0]);
+      // Hand is visible — reset the no-hand counter
+      noHandCountRef.current = 0;
+
+      // Build 126-feature vector from all detected hands
+      const features = handsToFeatures(hands);
       bufferRef.current.push(features);
 
       // Keep buffer at sequenceLength
@@ -129,24 +159,44 @@ export function useGestureClassifier(
         bufferRef.current = bufferRef.current.slice(-sequenceLength);
       }
     },
-    [handFrameToFeatures, sequenceLength]
+    [handsToFeatures, sequenceLength]
   );
+
+  // Minimum number of real frames before we attempt classification.
+  // The training data was collected with shorter recordings and padded
+  // to sequenceLength by repeating the last frame, so we replicate that
+  // behaviour at inference time for consistent predictions.
+  const MIN_FRAMES = Math.max(10, Math.floor(sequenceLength / 2));
 
   // Classify the current buffer (real model)
   const classify = useCallback(async (): Promise<GestureResult | null> => {
-    if (
-      !modelRef.current ||
-      bufferRef.current.length < sequenceLength ||
-      isClassifyingRef.current
-    ) {
+    if (!modelRef.current) {
+      console.warn('[LSTM] classify called but model not loaded');
+      return null;
+    }
+    if (bufferRef.current.length < MIN_FRAMES) {
+      // Not enough frames yet — wait for more hand data
+      return null;
+    }
+    if (isClassifyingRef.current) {
       return null;
     }
 
     isClassifyingRef.current = true;
 
     try {
+      // Build a sequenceLength-sized input, padding with the last frame
+      // when the buffer is shorter — this matches how the training
+      // pipeline pads short recordings.
+      let frames = bufferRef.current.slice(-sequenceLength);
+      if (frames.length < sequenceLength) {
+        const lastFrame = frames[frames.length - 1];
+        const pad = Array(sequenceLength - frames.length).fill(lastFrame);
+        frames = [...frames, ...pad];
+      }
+
       const result = tf.tidy(() => {
-        const input = tf.tensor3d([bufferRef.current]);
+        const input = tf.tensor3d([frames]);
         const prediction = modelRef.current!.predict(input) as tf.Tensor;
         return prediction.dataSync();
       });
@@ -154,6 +204,13 @@ export function useGestureClassifier(
       const maxIdx = result.indexOf(Math.max(...Array.from(result)));
       const confidence = result[maxIdx];
       const labels = modelLabelsRef.current;
+
+      // Debug: log every prediction so we can see what the model thinks
+      console.log(
+        `[LSTM] Prediction: ${labels[maxIdx] ?? "?"} (${(confidence * 100).toFixed(1)}%) | ` +
+        `all: [${Array.from(result).map((v, i) => `${labels[i] ?? i}=${(v * 100).toFixed(1)}%`).join(", ")}] | ` +
+        `threshold: ${(confidenceThreshold * 100).toFixed(0)}%`
+      );
 
       // Guard: make sure index is within the model's label set
       if (maxIdx >= labels.length) {
@@ -168,7 +225,7 @@ export function useGestureClassifier(
           source: "lstm",
         };
         setLastGesture(gesture);
-        onGestureDetected?.(gesture);
+        onGestureDetectedRef.current?.(gesture);
         return gesture;
       }
 
@@ -179,7 +236,8 @@ export function useGestureClassifier(
     } finally {
       isClassifyingRef.current = false;
     }
-  }, [sequenceLength, confidenceThreshold, onGestureDetected]);
+  }, [sequenceLength, confidenceThreshold, MIN_FRAMES]);
+
 
   // Demo mode: disabled — no fake random predictions
   const classifyDemo = useCallback((): GestureResult | null => {

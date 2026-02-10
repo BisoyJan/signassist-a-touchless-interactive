@@ -7,18 +7,44 @@ interface TranslationDisplayProps {
     confidence: number | null;
     transcript: TranslationEntry[];
     language: "en" | "fil";
+    spellingWord?: string | null;
+    spellingLetters?: string[];
 }
 
 export default function TranslationDisplay({
     currentTranslation,
     confidence,
     transcript,
+    spellingWord,
+    spellingLetters,
 }: TranslationDisplayProps) {
+    const isSpelling = spellingWord && spellingLetters && spellingLetters.length > 0;
+
     return (
         <div className="flex flex-col h-full">
             {/* Current translation — large prominent text */}
             <div className="flex-1 flex items-center justify-center px-6">
-                {currentTranslation ? (
+                {isSpelling ? (
+                    <div className="text-center">
+                        <p className="text-xs uppercase tracking-wider text-cyan-400 mb-2">
+                            Spelling
+                        </p>
+                        <div className="flex items-center justify-center gap-1 flex-wrap mb-3">
+                            {spellingLetters.map((letter, i) => (
+                                <span
+                                    key={`${i}-${letter}`}
+                                    className="inline-flex items-center justify-center w-10 h-12 bg-cyan-500/10 border border-cyan-400/30 rounded-md text-xl font-bold text-white"
+                                >
+                                    {letter}
+                                </span>
+                            ))}
+                            <span className="w-0.5 h-10 bg-cyan-400 rounded-full animate-pulse" />
+                        </div>
+                        <p className="text-4xl md:text-5xl font-bold text-white">
+                            {spellingWord}
+                        </p>
+                    </div>
+                ) : currentTranslation ? (
                     <div className="text-center">
                         <p className="text-5xl md:text-6xl font-bold text-white leading-tight">
                             {currentTranslation}

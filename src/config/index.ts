@@ -4,7 +4,7 @@ import type { SignAssistConfig, SignVocabularyItem } from "@/types";
 // Default system configuration
 // ============================================================
 export const DEFAULT_CONFIG: SignAssistConfig = {
-  confidenceThreshold: 0.75,
+  confidenceThreshold: 0.45,
   sequenceLength: 30, // 30 frames ≈ 1 second at 30 fps
   confirmationDelay: 2, // seconds
   language: "en",
@@ -56,6 +56,7 @@ export const SIGN_VOCABULARY: SignVocabularyItem[] = [
   { id: "wait", label: "wait", textEn: "Please wait", textFil: "Sandali lang", category: "general" },
   { id: "done", label: "done", textEn: "Done / Finished", textFil: "Tapos na", category: "general" },
   { id: "price", label: "price", textEn: "How much?", textFil: "Magkano?", category: "general" },
+  { id: "unknown", label: "unknown", textEn: "Unknown", textFil: "Hindi malinaw", category: "general" },
 
   // Letters (fingerspelling alphabet)
   { id: "letter_a", label: "letter_a", textEn: "A", textFil: "A", category: "letter" },
@@ -84,6 +85,11 @@ export const SIGN_VOCABULARY: SignVocabularyItem[] = [
   { id: "letter_x", label: "letter_x", textEn: "X", textFil: "X", category: "letter" },
   { id: "letter_y", label: "letter_y", textEn: "Y", textFil: "Y", category: "letter" },
   { id: "letter_z", label: "letter_z", textEn: "Z", textFil: "Z", category: "letter" },
+
+  // Mode-switching gestures (two-hand)
+  { id: "mode_navigate", label: "mode_navigate", textEn: "Navigate Mode", textFil: "Navigation", category: "mode" },
+  { id: "mode_spelling", label: "mode_spelling", textEn: "Spelling Mode", textFil: "Spelling", category: "mode" },
+  { id: "mode_sign", label: "mode_sign", textEn: "Motion Model Mode", textFil: "Motion Model", category: "mode" },
 ];
 
 /** Look up vocabulary item by label. */
@@ -107,8 +113,14 @@ export const NUM_CLASSES = CLASS_LABELS.length;
 /** Number of landmarks per hand. */
 export const NUM_LANDMARKS = 21;
 
-/** Features per frame: 21 landmarks × 3 coordinates. */
-export const FEATURES_PER_FRAME = NUM_LANDMARKS * 3;
+/** Max number of hands tracked. */
+export const NUM_HANDS = 2;
+
+/** Features per frame: 2 hands × 21 landmarks × 3 coordinates = 126. */
+export const FEATURES_PER_FRAME = NUM_HANDS * NUM_LANDMARKS * 3;
+
+/** Features per single hand (for backward compat). */
+export const FEATURES_PER_HAND = NUM_LANDMARKS * 3;
 
 /** MediaPipe Hand Landmarker WASM path (loaded from CDN). */
 export const MEDIAPIPE_WASM_PATH =

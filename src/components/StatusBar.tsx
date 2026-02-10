@@ -1,6 +1,6 @@
 "use client";
 
-import type { SystemStatus } from "@/types";
+import type { SystemStatus, InteractionMode } from "@/types";
 
 interface StatusBarProps {
     status: SystemStatus;
@@ -10,6 +10,8 @@ interface StatusBarProps {
     isModelLoaded: boolean;
     modelError: string | null;
     modelInfo: string | null;
+    mode: InteractionMode;
+    onToggleMode: (target: InteractionMode) => void;
 }
 
 const STATUS_LABELS: Record<SystemStatus, { text: string; color: string }> = {
@@ -30,6 +32,8 @@ export default function StatusBar({
     isModelLoaded,
     modelError,
     modelInfo,
+    mode,
+    onToggleMode,
 }: StatusBarProps) {
     const statusInfo = STATUS_LABELS[status];
 
@@ -81,11 +85,48 @@ export default function StatusBar({
                 )}
             </div>
 
-            {/* Right: Language toggle + branding */}
-            <div className="flex items-center gap-4">
+            {/* Right: Mode buttons + Language toggle + branding */}
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={() => onToggleMode("sign")}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                        mode === "sign"
+                            ? "bg-green-600/30 text-green-300 border-green-500/50"
+                            : "bg-gray-800/50 text-gray-400 border-gray-600/50 hover:bg-gray-700/50"
+                    }`}
+                    data-hand-nav
+                    title="Motion-trained model (✊+👍)"
+                >
+                    ✊👍 Motion
+                </button>
+                <button
+                    onClick={() => onToggleMode("spelling")}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                        mode === "spelling"
+                            ? "bg-sky-600/30 text-sky-300 border-sky-500/50"
+                            : "bg-gray-800/50 text-gray-400 border-gray-600/50 hover:bg-gray-700/50"
+                    }`}
+                    data-hand-nav
+                    title="Spelling mode (👍👍)"
+                >
+                    👍👍 Spelling
+                </button>
+                <button
+                    onClick={() => onToggleMode("navigate")}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                        mode === "navigate"
+                            ? "bg-purple-600/30 text-purple-300 border-purple-500/50"
+                            : "bg-gray-800/50 text-gray-400 border-gray-600/50 hover:bg-gray-700/50"
+                    }`}
+                    data-hand-nav
+                    title="Navigation mode (✊✊)"
+                >
+                    ✊✊ Navigate
+                </button>
                 <button
                     onClick={onToggleLanguage}
                     className="px-3 py-1 bg-gray-800 border border-gray-600 rounded-lg text-sm text-white hover:bg-gray-700 transition-colors"
+                    data-hand-nav
                 >
                     {language === "en" ? "🇺🇸 EN" : "🇵🇭 FIL"}
                 </button>

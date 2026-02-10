@@ -2,6 +2,9 @@
 // SignAssist — Core Type Definitions
 // ============================================================
 
+/** Interaction mode: motion-trained model, spelling, or hand navigation. */
+export type InteractionMode = "sign" | "spelling" | "navigate";
+
 /** A single hand landmark (21 per hand, from MediaPipe). */
 export interface Landmark {
   x: number;
@@ -30,8 +33,8 @@ export interface GestureResult {
   label: string;
   /** Confidence score 0-1. */
   confidence: number;
-  /** Whether this came from the LSTM (dynamic) or static classifier. */
-  source: "lstm" | "static";
+  /** Classification source. */
+  source: "lstm";
 }
 
 /** A single entry in the conversation transcript. */
@@ -60,7 +63,7 @@ export interface SignVocabularyItem {
   label: string;
   textEn: string;
   textFil: string;
-  category: "greeting" | "body_part" | "service" | "duration" | "feedback" | "general" | "letter";
+  category: "greeting" | "body_part" | "service" | "duration" | "feedback" | "general" | "letter" | "mode";
 }
 
 /** Configuration for the SignAssist system. */

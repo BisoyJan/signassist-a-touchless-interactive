@@ -50,3 +50,11 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #4b5563;
 }
+
+/* ── Hand-navigation hover highlight ───────────────────── */
+[data-hand-hover="true"] {
+  outline: 3px solid rgba(250, 204, 21, 0.7) !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 16px rgba(250, 204, 21, 0.35);
+  transition: outline 0.1s ease, box-shadow 0.1s ease;
+}

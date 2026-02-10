@@ -34,11 +34,17 @@ SignAssist bridges the communication gap between Deaf/Hard-of-Hearing (DHH) mass
 
 ## Getting Started
 
+If you only want to run the app, you can skip Python/model training — a pre-exported TF.js model is already included in `public/models/lstm/`.
+
 ### Prerequisites
 
 - Node.js 18+ and npm
 - A webcam
 - Chrome or Edge browser (for MediaPipe + Web Speech API support)
+
+Notes:
+- Camera access (`getUserMedia`) works on **secure contexts** only: `https://` or `http://localhost`.
+- If you deploy the static export to another machine over plain `http://`, the camera will be blocked by the browser.
 
 ### Install & Run
 
@@ -49,7 +55,14 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) — allow camera access when prompted.
 
+If you see a “Camera Access Required” screen, check:
+- The page is opened on `http://localhost:3000` (not a LAN IP)
+- Browser permissions (lock icon → Site settings → Camera)
+- No other app is using the webcam
+
 ### Kiosk Mode (Production)
+
+This project uses Next.js **static export** (`output: "export"` in `next.config.ts`). That means production is served from the generated `out/` folder (there is no `next start` server).
 
 ```bash
 npm run build
@@ -57,6 +70,11 @@ npx serve out
 # Then open Chrome in kiosk mode:
 # chrome.exe --kiosk --app=http://localhost:3000
 ```
+
+Tip (Windows): if `chrome.exe` isn’t in PATH, use the full path, e.g.:
+`"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --kiosk --app=http://localhost:3000`
+
+Important: if you serve the app from a different host/device, use `https://` (or the camera will not work).
 
 ## Training the Model
 
@@ -79,6 +97,16 @@ pip install -r requirements.txt
 # Place your collected JSON files in training/data/
 python train_model.py
 ```
+
+If you use Git Bash on Windows, you can also run training from the project root:
+```bash
+source training/.venv/Scripts/activate
+python training/train_model.py
+```
+
+Python notes:
+- Use Python 3.10–3.12 for best TensorFlow compatibility.
+- Consider creating a virtual environment (`python -m venv .venv`) before installing requirements.
 
 The script will:
 - Load all sample files from `training/data/`
@@ -140,3 +168,5 @@ The system recognizes 30 domain-specific signs across 6 categories:
 ## License
 
 This project is developed as a thesis for academic purposes.
+
+For a more detailed, step-by-step setup guide (including data collection + training), see `SETUP.txt`.

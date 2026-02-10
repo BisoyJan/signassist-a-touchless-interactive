@@ -1,13 +1,15 @@
 "use client";
 
 import { useRef, useCallback, useEffect, useState } from "react";
-import { useHandTracker, useGestureClassifier, useSpeechOutput } from "@/hooks";
+import { useHandTracker, useGestureClassifier, useSpeechOutput, useWordBuilder, useHandNavigation, useModeSwitcher } from "@/hooks";
 import {
   CameraFeed,
   TranslationDisplay,
   ConfirmationPanel,
   StatusBar,
   SpeakingIndicator,
+  SpellingDisplay,
+  HandCursor,
 } from "@/components";
 import { getTranslation, DEFAULT_CONFIG } from "@/config";
 import type { SystemStatus, TranslationEntry, HandFrame } from "@/types";
@@ -17,6 +19,8 @@ export default function KioskPage() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const classifyIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const spellingNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const letterStreakRef = useRef({ label: "", count: 0, lastTime: 0 });
 
   // ── State ─────────────────────────────────────────────────
   const [status, setStatus] = useState<SystemStatus>("initializing");
@@ -30,6 +34,7 @@ export default function KioskPage() {
     null
   );
   const [confidence, setConfidence] = useState<number | null>(null);
+  const [spellingNotice, setSpellingNotice] = useState<string | null>(null);
 
   // ── Hooks ─────────────────────────────────────────────────
   const {
@@ -43,8 +48,95 @@ export default function KioskPage() {
     onEnd: () => setStatus("ready"),
   });
 
+  // ── Word builder (letter → word) ─────────────────────────
+  const onWordComplete = useCallback(
+    (word: string) => {
+      setCurrentTranslation(word);
+      setConfidence(null);
+      setPendingText(word);
+      setPendingLabel(`spelled:${word}`);
+      setStatus("confirming");
+    },
+    []
+  );
+
+  const {
+    letters: spellingLetters,
+    isSpelling,
+    countdown: spellingCountdown,
+    addLetter,
+    deleteLast: deleteLastLetter,
+    finalizeWord,
+    cancelWord,
+  } = useWordBuilder({ onWordComplete });
+
+  // ── Mode switcher (3 modes: sign / spelling / navigate) ──
+  const { mode, setModeManual, checkModeGesture, holdProgress, isHolding, holdTarget } = useModeSwitcher();
+
   const onGestureDetected = useCallback(
-    (result: { label: string; confidence: number }) => {
+    (result: { label: string; confidence: number; source: string }) => {
+      // ── Mode-switching gestures (from LSTM) ─────────────
+      if (result.label === "mode_navigate") {
+        if (mode !== "navigate") setModeManual("navigate");
+        return;
+      }
+      if (result.label === "mode_spelling") {
+        if (mode !== "spelling") setModeManual("spelling");
+        return;
+      }
+      if (result.label === "mode_sign") {
+        if (mode !== "sign") setModeManual("sign");
+        return;
+      }
+
+      // ── Letters are only handled in spelling mode ───────
+      if (result.label.startsWith("letter_")) {
+        if (mode === "spelling") {
+          const SPELLING_CONFIDENCE_THRESHOLD = 0.75;
+          const LETTER_STREAK_REQUIRED = 3;
+          const LETTER_STREAK_WINDOW_MS = 900;
+
+          if (result.confidence < SPELLING_CONFIDENCE_THRESHOLD) {
+            setSpellingNotice("Hold the letter steady for clearer detection.");
+            return;
+          }
+
+          const now = Date.now();
+          const streak = letterStreakRef.current;
+          if (result.label === streak.label && now - streak.lastTime <= LETTER_STREAK_WINDOW_MS) {
+            streak.count += 1;
+          } else {
+            streak.label = result.label;
+            streak.count = 1;
+          }
+          streak.lastTime = now;
+
+          if (streak.count >= LETTER_STREAK_REQUIRED) {
+            streak.label = "";
+            streak.count = 0;
+            addLetter(result.label);
+          }
+        }
+        return;
+      }
+
+      if (result.label === "unknown") {
+        if (mode === "spelling") {
+          setSpellingNotice("No clear letter detected.");
+        } else if (mode === "sign") {
+          setCurrentTranslation("Unknown sign");
+          setConfidence(result.confidence);
+        }
+        return;
+      }
+
+      // In spelling mode, ignore non-letter gestures
+      if (mode === "spelling") {
+        setSpellingNotice("Spelling mode accepts letters only.");
+        return;
+      }
+
+      // Non-letter gesture → show confirmation (works in both sign & spelling modes)
       const text = getTranslation(result.label, language);
       setCurrentTranslation(text);
       setConfidence(result.confidence);
@@ -52,7 +144,7 @@ export default function KioskPage() {
       setPendingLabel(result.label);
       setStatus("confirming");
     },
-    [language]
+    [language, addLetter, mode, setModeManual]
   );
 
   const {
@@ -68,13 +160,65 @@ export default function KioskPage() {
     onGestureDetected,
   });
 
+  // ── Hand navigation (touchless cursor + pinch click) ────
+  const { cursor, cursorDomRef, updateFromHands: updateNav } = useHandNavigation();
+
+  // Cancel any in-progress spelling when leaving spelling mode
+  useEffect(() => {
+    if (mode !== "spelling" && isSpelling) {
+      cancelWord();
+    }
+  }, [mode, isSpelling, cancelWord]);
+
+  useEffect(() => {
+    if (mode !== "spelling") {
+      setSpellingNotice(null);
+      letterStreakRef.current = { label: "", count: 0, lastTime: 0 };
+    }
+  }, [mode]);
+
+  useEffect(() => {
+    if (!spellingNotice) return;
+    if (spellingNoticeTimerRef.current) {
+      clearTimeout(spellingNoticeTimerRef.current);
+    }
+    spellingNoticeTimerRef.current = setTimeout(() => {
+      setSpellingNotice(null);
+    }, 1200);
+  }, [spellingNotice]);
+
   const onHandResults = useCallback(
     (hands: HandFrame[]) => {
-      if (status === "confirming" || status === "speaking") return;
-      setStatus(hands.length > 0 ? "detecting" : "ready");
+      // Always check for heuristic mode-switch gestures (fallback)
+      checkModeGesture(hands);
+
+      // Always feed frames to the LSTM buffer so it can detect mode gestures
+      // even while navigating or spelling.
+      // NOTE: Always call pushFrame — even with empty hands — so the buffer
+      // can be cleared after a gap (noHandCount logic inside pushFrame).
       pushFrame(hands);
+
+      // In navigate mode → update cursor
+      if (mode === "navigate") {
+        updateNav(hands, true);
+        if (status !== "confirming" && status !== "speaking") {
+          setStatus(hands.length > 0 ? "detecting" : "ready");
+        }
+        return;
+      }
+
+      // In sign or spelling mode → hide cursor
+      updateNav([], false);
+
+      if (status === "confirming" || status === "speaking") return;
+
+      // Suppress classification while any mode-switch gesture is being held
+      if (isHolding) return;
+
+      // During spelling, stay in "detecting" so the classifier keeps running
+      setStatus(hands.length > 0 ? "detecting" : (isSpelling ? "detecting" : "ready"));
     },
-    [pushFrame, status]
+    [pushFrame, status, isSpelling, updateNav, mode, checkModeGesture, isHolding]
   );
 
   const {
@@ -114,12 +258,12 @@ export default function KioskPage() {
     }
   }, [isHandTrackerLoading, isTracking, startTracking, status]);
 
-  // Run classification at regular intervals
+  // Run classification at regular intervals (all modes — LSTM detects mode gestures too)
   useEffect(() => {
     if (status === "detecting") {
       classifyIntervalRef.current = setInterval(() => {
         classify();
-      }, 500);
+      }, 300);
     } else {
       if (classifyIntervalRef.current) {
         clearInterval(classifyIntervalRef.current);
@@ -178,6 +322,7 @@ export default function KioskPage() {
           <button
             onClick={() => window.location.reload()}
             className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-500 transition-colors"
+            data-hand-nav
           >
             Retry
           </button>
@@ -207,9 +352,22 @@ export default function KioskPage() {
             confidence={confidence}
             transcript={transcript}
             language={language}
+            spellingWord={isSpelling ? spellingLetters.join("") : null}
+            spellingLetters={spellingLetters}
           />
         </div>
       </div>
+
+      {/* Spelling overlay */}
+      <SpellingDisplay
+        letters={spellingLetters}
+        countdown={spellingCountdown}
+        isSpelling={isSpelling}
+        notice={spellingNotice}
+        onFinalize={finalizeWord}
+        onCancel={cancelWord}
+        onDeleteLast={deleteLastLetter}
+      />
 
       {/* Confirmation overlay */}
       <ConfirmationPanel
@@ -222,6 +380,9 @@ export default function KioskPage() {
       {/* Speaking indicator */}
       <SpeakingIndicator isSpeaking={isSpeaking} />
 
+      {/* Hand cursor overlay */}
+      <HandCursor cursor={cursor} mode={mode} holdProgress={holdProgress} holdTarget={holdTarget} cursorDomRef={cursorDomRef} />
+
       {/* Status bar */}
       <StatusBar
         status={status}
@@ -231,6 +392,8 @@ export default function KioskPage() {
         isModelLoaded={isModelLoaded}
         modelError={modelError}
         modelInfo={modelInfo}
+        mode={mode}
+        onToggleMode={setModeManual}
       />
     </div>
   );

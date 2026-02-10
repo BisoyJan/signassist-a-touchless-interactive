@@ -90,6 +90,7 @@ export default function ConfirmationPanel({
                     <button
                         onClick={handleCancel}
                         className="px-5 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-sm font-medium hover:bg-red-500/30 transition-colors"
+                        data-hand-nav
                     >
                         Cancel ✕
                     </button>
