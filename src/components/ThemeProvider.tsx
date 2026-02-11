@@ -12,8 +12,8 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue>({
     theme: "dark",
-    toggleTheme: () => {},
-    setTheme: () => {},
+    toggleTheme: () => { },
+    setTheme: () => { },
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {

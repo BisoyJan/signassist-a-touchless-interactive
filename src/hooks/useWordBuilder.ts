@@ -15,177 +15,177 @@ const AUTO_FINALIZE_DELAY = 3;
 const MIN_LETTER_GAP_MS = 1200;
 
 interface UseWordBuilderOptions {
-  /**
-   * Called when the word is finalized (either by timeout or explicit confirm).
-   * Receives the assembled word string.
-   */
-  onWordComplete?: (word: string) => void;
+    /**
+     * Called when the word is finalized (either by timeout or explicit confirm).
+     * Receives the assembled word string.
+     */
+    onWordComplete?: (word: string) => void;
 }
 
 export interface WordBuilderState {
-  /** Letters accumulated so far. */
-  letters: string[];
-  /** Joined word preview. */
-  word: string;
-  /** Whether a spelling session is active. */
-  isSpelling: boolean;
-  /** Seconds remaining before auto-finalize (null if not spelling). */
-  countdown: number | null;
+    /** Letters accumulated so far. */
+    letters: string[];
+    /** Joined word preview. */
+    word: string;
+    /** Whether a spelling session is active. */
+    isSpelling: boolean;
+    /** Seconds remaining before auto-finalize (null if not spelling). */
+    countdown: number | null;
 }
 
 export function useWordBuilder(options: UseWordBuilderOptions = {}) {
-  const { onWordComplete } = options;
+    const { onWordComplete } = options;
 
-  const lettersRef = useRef<string[]>([]);
-  const lastLetterTimeRef = useRef<number>(0);
-  const lastLetterRef = useRef<string>("");
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const lettersRef = useRef<string[]>([]);
+    const lastLetterTimeRef = useRef<number>(0);
+    const lastLetterRef = useRef<string>("");
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Keep a stable ref so the timer can call the latest callback
-  const onWordCompleteRef = useRef(onWordComplete);
-  useEffect(() => {
-    onWordCompleteRef.current = onWordComplete;
-  }, [onWordComplete]);
+    // Keep a stable ref so the timer can call the latest callback
+    const onWordCompleteRef = useRef(onWordComplete);
+    useEffect(() => {
+        onWordCompleteRef.current = onWordComplete;
+    }, [onWordComplete]);
 
-  const [state, setState] = useState<WordBuilderState>({
-    letters: [],
-    word: "",
-    isSpelling: false,
-    countdown: null,
-  });
-
-  const syncState = useCallback(() => {
-    const letters = [...lettersRef.current];
-    setState({
-      letters,
-      word: letters.join(""),
-      isSpelling: letters.length > 0,
-      countdown: letters.length > 0 ? AUTO_FINALIZE_DELAY : null,
+    const [state, setState] = useState<WordBuilderState>({
+        letters: [],
+        word: "",
+        isSpelling: false,
+        countdown: null,
     });
-  }, []);
 
-  const clearTimers = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    if (countdownIntervalRef.current) {
-      clearInterval(countdownIntervalRef.current);
-      countdownIntervalRef.current = null;
-    }
-  }, []);
+    const syncState = useCallback(() => {
+        const letters = [...lettersRef.current];
+        setState({
+            letters,
+            word: letters.join(""),
+            isSpelling: letters.length > 0,
+            countdown: letters.length > 0 ? AUTO_FINALIZE_DELAY : null,
+        });
+    }, []);
 
-  /** Finalize the current word and reset. */
-  const finalizeWord = useCallback(() => {
-    clearTimers();
-    const word = lettersRef.current.join("");
-    if (word.length > 0) {
-      onWordCompleteRef.current?.(word);
-    }
-    lettersRef.current = [];
-    lastLetterRef.current = "";
-    lastLetterTimeRef.current = 0;
-    setState({ letters: [], word: "", isSpelling: false, countdown: null });
-  }, [clearTimers]);
+    const clearTimers = useCallback(() => {
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
+        }
+        if (countdownIntervalRef.current) {
+            clearInterval(countdownIntervalRef.current);
+            countdownIntervalRef.current = null;
+        }
+    }, []);
 
-  /** Start or restart the auto-finalize countdown. */
-  const restartCountdown = useCallback(() => {
-    clearTimers();
+    /** Finalize the current word and reset. */
+    const finalizeWord = useCallback(() => {
+        clearTimers();
+        const word = lettersRef.current.join("");
+        if (word.length > 0) {
+            onWordCompleteRef.current?.(word);
+        }
+        lettersRef.current = [];
+        lastLetterRef.current = "";
+        lastLetterTimeRef.current = 0;
+        setState({ letters: [], word: "", isSpelling: false, countdown: null });
+    }, [clearTimers]);
 
-    // Countdown state update
-    let remaining = AUTO_FINALIZE_DELAY;
-    setState((prev) => ({ ...prev, countdown: remaining }));
+    /** Start or restart the auto-finalize countdown. */
+    const restartCountdown = useCallback(() => {
+        clearTimers();
 
-    countdownIntervalRef.current = setInterval(() => {
-      remaining--;
-      setState((prev) => ({ ...prev, countdown: Math.max(0, remaining) }));
-    }, 1000);
+        // Countdown state update
+        let remaining = AUTO_FINALIZE_DELAY;
+        setState((prev) => ({ ...prev, countdown: remaining }));
 
-    // Auto-finalize after delay
-    timerRef.current = setTimeout(() => {
-      if (countdownIntervalRef.current) {
-        clearInterval(countdownIntervalRef.current);
-        countdownIntervalRef.current = null;
-      }
-      finalizeWord();
-    }, AUTO_FINALIZE_DELAY * 1000);
-  }, [clearTimers, finalizeWord]);
+        countdownIntervalRef.current = setInterval(() => {
+            remaining--;
+            setState((prev) => ({ ...prev, countdown: Math.max(0, remaining) }));
+        }, 1000);
 
-  /**
-   * Add a detected letter to the word.
-   * Call this when the static classifier recognizes a letter_* label.
-   *
-   * @param letterLabel — e.g. "letter_a", "letter_v"
-   */
-  const addLetter = useCallback(
-    (letterLabel: string) => {
-      // Extract the letter character from "letter_x"
-      const char = letterLabel.replace("letter_", "").toUpperCase();
-      if (char.length !== 1) return;
+        // Auto-finalize after delay
+        timerRef.current = setTimeout(() => {
+            if (countdownIntervalRef.current) {
+                clearInterval(countdownIntervalRef.current);
+                countdownIntervalRef.current = null;
+            }
+            finalizeWord();
+        }, AUTO_FINALIZE_DELAY * 1000);
+    }, [clearTimers, finalizeWord]);
 
-      const now = Date.now();
+    /**
+     * Add a detected letter to the word.
+     * Call this when the static classifier recognizes a letter_* label.
+     *
+     * @param letterLabel — e.g. "letter_a", "letter_v"
+     */
+    const addLetter = useCallback(
+        (letterLabel: string) => {
+            // Extract the letter character from "letter_x"
+            const char = letterLabel.replace("letter_", "").toUpperCase();
+            if (char.length !== 1) return;
 
-      // Debounce — don't accept the exact same letter too fast
-      if (
-        char === lastLetterRef.current &&
-        now - lastLetterTimeRef.current < MIN_LETTER_GAP_MS
-      ) {
-        // Same letter held — just restart the auto-finalize countdown
-        restartCountdown();
-        return;
-      }
+            const now = Date.now();
 
-      lastLetterRef.current = char;
-      lastLetterTimeRef.current = now;
-      lettersRef.current.push(char);
-      syncState();
-      restartCountdown();
-    },
-    [restartCountdown, syncState]
-  );
+            // Debounce — don't accept the exact same letter too fast
+            if (
+                char === lastLetterRef.current &&
+                now - lastLetterTimeRef.current < MIN_LETTER_GAP_MS
+            ) {
+                // Same letter held — just restart the auto-finalize countdown
+                restartCountdown();
+                return;
+            }
 
-  /** Remove the last letter (e.g. triggered by a "back" gesture). */
-  const deleteLast = useCallback(() => {
-    if (lettersRef.current.length === 0) return;
-    lettersRef.current.pop();
-    if (lettersRef.current.length === 0) {
-      clearTimers();
-      lastLetterRef.current = "";
-      lastLetterTimeRef.current = 0;
-      setState({ letters: [], word: "", isSpelling: false, countdown: null });
-    } else {
-      syncState();
-      restartCountdown();
-    }
-  }, [clearTimers, syncState, restartCountdown]);
+            lastLetterRef.current = char;
+            lastLetterTimeRef.current = now;
+            lettersRef.current.push(char);
+            syncState();
+            restartCountdown();
+        },
+        [restartCountdown, syncState]
+    );
 
-  /** Discard the current word without confirming. */
-  const cancelWord = useCallback(() => {
-    clearTimers();
-    lettersRef.current = [];
-    lastLetterRef.current = "";
-    lastLetterTimeRef.current = 0;
-    setState({ letters: [], word: "", isSpelling: false, countdown: null });
-  }, [clearTimers]);
+    /** Remove the last letter (e.g. triggered by a "back" gesture). */
+    const deleteLast = useCallback(() => {
+        if (lettersRef.current.length === 0) return;
+        lettersRef.current.pop();
+        if (lettersRef.current.length === 0) {
+            clearTimers();
+            lastLetterRef.current = "";
+            lastLetterTimeRef.current = 0;
+            setState({ letters: [], word: "", isSpelling: false, countdown: null });
+        } else {
+            syncState();
+            restartCountdown();
+        }
+    }, [clearTimers, syncState, restartCountdown]);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      clearTimers();
+    /** Discard the current word without confirming. */
+    const cancelWord = useCallback(() => {
+        clearTimers();
+        lettersRef.current = [];
+        lastLetterRef.current = "";
+        lastLetterTimeRef.current = 0;
+        setState({ letters: [], word: "", isSpelling: false, countdown: null });
+    }, [clearTimers]);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            clearTimers();
+        };
+    }, [clearTimers]);
+
+    return {
+        /** Current spelling state. */
+        ...state,
+        /** Add a letter from a "letter_*" detection. */
+        addLetter,
+        /** Remove last letter. */
+        deleteLast,
+        /** Finalize the word immediately. */
+        finalizeWord,
+        /** Discard the word. */
+        cancelWord,
     };
-  }, [clearTimers]);
-
-  return {
-    /** Current spelling state. */
-    ...state,
-    /** Add a letter from a "letter_*" detection. */
-    addLetter,
-    /** Remove last letter. */
-    deleteLast,
-    /** Finalize the word immediately. */
-    finalizeWord,
-    /** Discard the word. */
-    cancelWord,
-  };
 }

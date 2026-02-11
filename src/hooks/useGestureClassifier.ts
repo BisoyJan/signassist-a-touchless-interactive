@@ -3,264 +3,264 @@
 import { useRef, useCallback, useState, useEffect } from "react";
 import * as tf from "@tensorflow/tfjs";
 import {
-  DEFAULT_CONFIG,
-  FEATURES_PER_FRAME,
-  FEATURES_PER_HAND,
-  NUM_HANDS,
-  CLASS_LABELS,
+    DEFAULT_CONFIG,
+    FEATURES_PER_FRAME,
+    FEATURES_PER_HAND,
+    NUM_HANDS,
+    CLASS_LABELS,
 } from "@/config";
 import type { GestureResult, HandFrame } from "@/types";
 
 interface UseGestureClassifierOptions {
-  modelUrl?: string;
-  labelsUrl?: string;
-  sequenceLength?: number;
-  confidenceThreshold?: number;
-  onGestureDetected?: (result: GestureResult) => void;
+    modelUrl?: string;
+    labelsUrl?: string;
+    sequenceLength?: number;
+    confidenceThreshold?: number;
+    onGestureDetected?: (result: GestureResult) => void;
 }
 
 export function useGestureClassifier(
-  options: UseGestureClassifierOptions = {}
+    options: UseGestureClassifierOptions = {}
 ) {
-  const {
-    modelUrl = "/models/lstm/model.json",
-    labelsUrl = "/models/lstm/labels.json",
-    sequenceLength = DEFAULT_CONFIG.sequenceLength,
-    confidenceThreshold = DEFAULT_CONFIG.confidenceThreshold,
-    onGestureDetected,
-  } = options;
+    const {
+        modelUrl = "/models/lstm/model.json",
+        labelsUrl = "/models/lstm/labels.json",
+        sequenceLength = DEFAULT_CONFIG.sequenceLength,
+        confidenceThreshold = DEFAULT_CONFIG.confidenceThreshold,
+        onGestureDetected,
+    } = options;
 
-  const modelRef = useRef<tf.LayersModel | null>(null);
-  const modelLabelsRef = useRef<string[]>(CLASS_LABELS);
-  const bufferRef = useRef<number[][]>([]);
-  const isClassifyingRef = useRef(false);
-  /** Consecutive frames with no hand detected — used to clear the buffer. */
-  const noHandCountRef = useRef(0);
-  /** Clear the buffer after this many consecutive empty-hand frames (~0.3s). */
-  const CLEAR_AFTER_EMPTY = 10;
+    const modelRef = useRef<tf.LayersModel | null>(null);
+    const modelLabelsRef = useRef<string[]>(CLASS_LABELS);
+    const bufferRef = useRef<number[][]>([]);
+    const isClassifyingRef = useRef(false);
+    /** Consecutive frames with no hand detected — used to clear the buffer. */
+    const noHandCountRef = useRef(0);
+    /** Clear the buffer after this many consecutive empty-hand frames (~0.3s). */
+    const CLEAR_AFTER_EMPTY = 10;
 
-  // Keep a stable ref to onGestureDetected so pushFrame can call it
-  // without re-creating itself on every render.
-  const onGestureDetectedRef = useRef(onGestureDetected);
-  useEffect(() => {
-    onGestureDetectedRef.current = onGestureDetected;
-  }, [onGestureDetected]);
+    // Keep a stable ref to onGestureDetected so pushFrame can call it
+    // without re-creating itself on every render.
+    const onGestureDetectedRef = useRef(onGestureDetected);
+    useEffect(() => {
+        onGestureDetectedRef.current = onGestureDetected;
+    }, [onGestureDetected]);
 
-  const [isModelLoaded, setIsModelLoaded] = useState(false);
-  const [modelError, setModelError] = useState<string | null>(null);
-  const [modelInfo, setModelInfo] = useState<string | null>(null);
-  const [lastGesture, setLastGesture] = useState<GestureResult | null>(null);
+    const [isModelLoaded, setIsModelLoaded] = useState(false);
+    const [modelError, setModelError] = useState<string | null>(null);
+    const [modelInfo, setModelInfo] = useState<string | null>(null);
+    const [lastGesture, setLastGesture] = useState<GestureResult | null>(null);
 
-  // Load the TF.js LSTM model + its labels
-  const loadModel = useCallback(async () => {
-    try {
-      // Prefer WebGL backend
-      await tf.setBackend("webgl");
-      await tf.ready();
+    // Load the TF.js LSTM model + its labels
+    const loadModel = useCallback(async () => {
+        try {
+            // Prefer WebGL backend
+            await tf.setBackend("webgl");
+            await tf.ready();
 
-      // Load model labels (the class names used during training)
-      try {
-        const res = await fetch(labelsUrl);
-        if (res.ok) {
-          const labels: string[] = await res.json();
-          if (Array.isArray(labels) && labels.length > 0) {
-            modelLabelsRef.current = labels;
-            console.log(`Loaded ${labels.length} model labels:`, labels);
-          }
+            // Load model labels (the class names used during training)
+            try {
+                const res = await fetch(labelsUrl);
+                if (res.ok) {
+                    const labels: string[] = await res.json();
+                    if (Array.isArray(labels) && labels.length > 0) {
+                        modelLabelsRef.current = labels;
+                        console.log(`Loaded ${labels.length} model labels:`, labels);
+                    }
+                }
+            } catch {
+                console.warn("Could not load labels.json — falling back to config labels");
+            }
+
+            const model = await tf.loadLayersModel(modelUrl);
+
+            // Validate output dimension matches labels
+            const outputShape = model.outputShape as number[];
+            const numOutputClasses = outputShape[outputShape.length - 1];
+            console.log(`Model output shape: [${outputShape}], classes: ${numOutputClasses}`);
+
+            if (numOutputClasses !== modelLabelsRef.current.length) {
+                console.warn(
+                    `Model output (${numOutputClasses}) != labels (${modelLabelsRef.current.length}). ` +
+                    `Predictions may be incorrect. Retrain the model with all classes.`
+                );
+                // Adjust labels to match model output if needed
+                if (numOutputClasses < modelLabelsRef.current.length) {
+                    modelLabelsRef.current = modelLabelsRef.current.slice(0, numOutputClasses);
+                }
+            }
+
+            // Info message if model knows very few classes
+            if (numOutputClasses <= 2) {
+                setModelInfo(
+                    `Model has ${numOutputClasses} class${numOutputClasses === 1 ? "" : "es"} ` +
+                    `(${modelLabelsRef.current.join(", ")}). Collect samples for more signs and retrain.`
+                );
+            }
+
+            // Warm up with dummy input
+            const dummy = tf.zeros([1, sequenceLength, FEATURES_PER_FRAME]);
+            const warmup = model.predict(dummy) as tf.Tensor;
+            warmup.dispose();
+            dummy.dispose();
+
+            modelRef.current = model;
+            setIsModelLoaded(true);
+            setModelError(null);
+            console.log(
+                `LSTM model loaded — ${numOutputClasses} classes: [${modelLabelsRef.current.join(", ")}]`
+            );
+        } catch (err) {
+            console.warn("LSTM model not found (expected during development):", err);
+            setModelError(
+                "Model not loaded — using demo mode. Train and export your model to /public/models/lstm/"
+            );
+            setIsModelLoaded(false);
         }
-      } catch {
-        console.warn("Could not load labels.json — falling back to config labels");
-      }
+    }, [modelUrl, labelsUrl, sequenceLength]);
 
-      const model = await tf.loadLayersModel(modelUrl);
-
-      // Validate output dimension matches labels
-      const outputShape = model.outputShape as number[];
-      const numOutputClasses = outputShape[outputShape.length - 1];
-      console.log(`Model output shape: [${outputShape}], classes: ${numOutputClasses}`);
-
-      if (numOutputClasses !== modelLabelsRef.current.length) {
-        console.warn(
-          `Model output (${numOutputClasses}) != labels (${modelLabelsRef.current.length}). ` +
-          `Predictions may be incorrect. Retrain the model with all classes.`
-        );
-        // Adjust labels to match model output if needed
-        if (numOutputClasses < modelLabelsRef.current.length) {
-          modelLabelsRef.current = modelLabelsRef.current.slice(0, numOutputClasses);
+    // Convert HandFrame[] to a flat 126-feature vector (2 hands × 63 features)
+    // If only 1 hand detected, the second hand's features are zero-padded.
+    const handsToFeatures = useCallback((hands: HandFrame[]): number[] => {
+        const features = new Array(FEATURES_PER_FRAME).fill(0); // 126 zeros
+        for (let h = 0; h < Math.min(hands.length, NUM_HANDS); h++) {
+            const offset = h * FEATURES_PER_HAND;
+            for (let i = 0; i < hands[h].landmarks.length; i++) {
+                features[offset + i * 3] = hands[h].landmarks[i].x;
+                features[offset + i * 3 + 1] = hands[h].landmarks[i].y;
+                features[offset + i * 3 + 2] = hands[h].landmarks[i].z;
+            }
         }
-      }
+        return features;
+    }, []);
 
-      // Info message if model knows very few classes
-      if (numOutputClasses <= 2) {
-        setModelInfo(
-          `Model has ${numOutputClasses} class${numOutputClasses === 1 ? "" : "es"} ` +
-          `(${modelLabelsRef.current.join(", ")}). Collect samples for more signs and retrain.`
-        );
-      }
+    // Push a new frame into the sliding buffer
+    const pushFrame = useCallback(
+        (hands: HandFrame[]) => {
+            if (hands.length === 0) {
+                // Clear the landmark buffer after a short gap so stale frames don't
+                // bleed into the next gesture.
+                noHandCountRef.current++;
+                if (noHandCountRef.current >= CLEAR_AFTER_EMPTY) {
+                    bufferRef.current = [];
+                }
+                return;
+            }
 
-      // Warm up with dummy input
-      const dummy = tf.zeros([1, sequenceLength, FEATURES_PER_FRAME]);
-      const warmup = model.predict(dummy) as tf.Tensor;
-      warmup.dispose();
-      dummy.dispose();
+            // Hand is visible — reset the no-hand counter
+            noHandCountRef.current = 0;
 
-      modelRef.current = model;
-      setIsModelLoaded(true);
-      setModelError(null);
-      console.log(
-        `LSTM model loaded — ${numOutputClasses} classes: [${modelLabelsRef.current.join(", ")}]`
-      );
-    } catch (err) {
-      console.warn("LSTM model not found (expected during development):", err);
-      setModelError(
-        "Model not loaded — using demo mode. Train and export your model to /public/models/lstm/"
-      );
-      setIsModelLoaded(false);
-    }
-  }, [modelUrl, labelsUrl, sequenceLength]);
+            // Build 126-feature vector from all detected hands
+            const features = handsToFeatures(hands);
+            bufferRef.current.push(features);
 
-  // Convert HandFrame[] to a flat 126-feature vector (2 hands × 63 features)
-  // If only 1 hand detected, the second hand's features are zero-padded.
-  const handsToFeatures = useCallback((hands: HandFrame[]): number[] => {
-    const features = new Array(FEATURES_PER_FRAME).fill(0); // 126 zeros
-    for (let h = 0; h < Math.min(hands.length, NUM_HANDS); h++) {
-      const offset = h * FEATURES_PER_HAND;
-      for (let i = 0; i < hands[h].landmarks.length; i++) {
-        features[offset + i * 3] = hands[h].landmarks[i].x;
-        features[offset + i * 3 + 1] = hands[h].landmarks[i].y;
-        features[offset + i * 3 + 2] = hands[h].landmarks[i].z;
-      }
-    }
-    return features;
-  }, []);
+            // Keep buffer at sequenceLength
+            if (bufferRef.current.length > sequenceLength) {
+                bufferRef.current = bufferRef.current.slice(-sequenceLength);
+            }
+        },
+        [handsToFeatures, sequenceLength]
+    );
 
-  // Push a new frame into the sliding buffer
-  const pushFrame = useCallback(
-    (hands: HandFrame[]) => {
-      if (hands.length === 0) {
-        // Clear the landmark buffer after a short gap so stale frames don't
-        // bleed into the next gesture.
-        noHandCountRef.current++;
-        if (noHandCountRef.current >= CLEAR_AFTER_EMPTY) {
-          bufferRef.current = [];
+    // Minimum number of real frames before we attempt classification.
+    // The training data was collected with shorter recordings and padded
+    // to sequenceLength by repeating the last frame, so we replicate that
+    // behaviour at inference time for consistent predictions.
+    const MIN_FRAMES = Math.max(10, Math.floor(sequenceLength / 2));
+
+    // Classify the current buffer (real model)
+    const classify = useCallback(async (): Promise<GestureResult | null> => {
+        if (!modelRef.current) {
+            console.warn('[LSTM] classify called but model not loaded');
+            return null;
         }
-        return;
-      }
+        if (bufferRef.current.length < MIN_FRAMES) {
+            // Not enough frames yet — wait for more hand data
+            return null;
+        }
+        if (isClassifyingRef.current) {
+            return null;
+        }
 
-      // Hand is visible — reset the no-hand counter
-      noHandCountRef.current = 0;
+        isClassifyingRef.current = true;
 
-      // Build 126-feature vector from all detected hands
-      const features = handsToFeatures(hands);
-      bufferRef.current.push(features);
+        try {
+            // Build a sequenceLength-sized input, padding with the last frame
+            // when the buffer is shorter — this matches how the training
+            // pipeline pads short recordings.
+            let frames = bufferRef.current.slice(-sequenceLength);
+            if (frames.length < sequenceLength) {
+                const lastFrame = frames[frames.length - 1];
+                const pad = Array(sequenceLength - frames.length).fill(lastFrame);
+                frames = [...frames, ...pad];
+            }
 
-      // Keep buffer at sequenceLength
-      if (bufferRef.current.length > sequenceLength) {
-        bufferRef.current = bufferRef.current.slice(-sequenceLength);
-      }
-    },
-    [handsToFeatures, sequenceLength]
-  );
+            const result = tf.tidy(() => {
+                const input = tf.tensor3d([frames]);
+                const prediction = modelRef.current!.predict(input) as tf.Tensor;
+                return prediction.dataSync();
+            });
 
-  // Minimum number of real frames before we attempt classification.
-  // The training data was collected with shorter recordings and padded
-  // to sequenceLength by repeating the last frame, so we replicate that
-  // behaviour at inference time for consistent predictions.
-  const MIN_FRAMES = Math.max(10, Math.floor(sequenceLength / 2));
+            const maxIdx = result.indexOf(Math.max(...Array.from(result)));
+            const confidence = result[maxIdx];
+            const labels = modelLabelsRef.current;
 
-  // Classify the current buffer (real model)
-  const classify = useCallback(async (): Promise<GestureResult | null> => {
-    if (!modelRef.current) {
-      console.warn('[LSTM] classify called but model not loaded');
-      return null;
-    }
-    if (bufferRef.current.length < MIN_FRAMES) {
-      // Not enough frames yet — wait for more hand data
-      return null;
-    }
-    if (isClassifyingRef.current) {
-      return null;
-    }
+            // Debug: log every prediction so we can see what the model thinks
+            console.log(
+                `[LSTM] Prediction: ${labels[maxIdx] ?? "?"} (${(confidence * 100).toFixed(1)}%) | ` +
+                `all: [${Array.from(result).map((v, i) => `${labels[i] ?? i}=${(v * 100).toFixed(1)}%`).join(", ")}] | ` +
+                `threshold: ${(confidenceThreshold * 100).toFixed(0)}%`
+            );
 
-    isClassifyingRef.current = true;
+            // Guard: make sure index is within the model's label set
+            if (maxIdx >= labels.length) {
+                console.warn(`Prediction index ${maxIdx} out of range for ${labels.length} labels`);
+                return null;
+            }
 
-    try {
-      // Build a sequenceLength-sized input, padding with the last frame
-      // when the buffer is shorter — this matches how the training
-      // pipeline pads short recordings.
-      let frames = bufferRef.current.slice(-sequenceLength);
-      if (frames.length < sequenceLength) {
-        const lastFrame = frames[frames.length - 1];
-        const pad = Array(sequenceLength - frames.length).fill(lastFrame);
-        frames = [...frames, ...pad];
-      }
+            if (confidence >= confidenceThreshold) {
+                const gesture: GestureResult = {
+                    label: labels[maxIdx],
+                    confidence,
+                    source: "lstm",
+                };
+                setLastGesture(gesture);
+                onGestureDetectedRef.current?.(gesture);
+                return gesture;
+            }
 
-      const result = tf.tidy(() => {
-        const input = tf.tensor3d([frames]);
-        const prediction = modelRef.current!.predict(input) as tf.Tensor;
-        return prediction.dataSync();
-      });
+            return null;
+        } catch (err) {
+            console.error("Classification error:", err);
+            return null;
+        } finally {
+            isClassifyingRef.current = false;
+        }
+    }, [sequenceLength, confidenceThreshold, MIN_FRAMES]);
 
-      const maxIdx = result.indexOf(Math.max(...Array.from(result)));
-      const confidence = result[maxIdx];
-      const labels = modelLabelsRef.current;
 
-      // Debug: log every prediction so we can see what the model thinks
-      console.log(
-        `[LSTM] Prediction: ${labels[maxIdx] ?? "?"} (${(confidence * 100).toFixed(1)}%) | ` +
-        `all: [${Array.from(result).map((v, i) => `${labels[i] ?? i}=${(v * 100).toFixed(1)}%`).join(", ")}] | ` +
-        `threshold: ${(confidenceThreshold * 100).toFixed(0)}%`
-      );
-
-      // Guard: make sure index is within the model's label set
-      if (maxIdx >= labels.length) {
-        console.warn(`Prediction index ${maxIdx} out of range for ${labels.length} labels`);
+    // Demo mode: disabled — no fake random predictions
+    const classifyDemo = useCallback((): GestureResult | null => {
+        // In demo mode (no model loaded), we don't generate fake predictions.
+        // The user should train and deploy a real model first.
         return null;
-      }
+    }, []);
 
-      if (confidence >= confidenceThreshold) {
-        const gesture: GestureResult = {
-          label: labels[maxIdx],
-          confidence,
-          source: "lstm",
+    // Cleanup
+    useEffect(() => {
+        return () => {
+            modelRef.current?.dispose();
         };
-        setLastGesture(gesture);
-        onGestureDetectedRef.current?.(gesture);
-        return gesture;
-      }
+    }, []);
 
-      return null;
-    } catch (err) {
-      console.error("Classification error:", err);
-      return null;
-    } finally {
-      isClassifyingRef.current = false;
-    }
-  }, [sequenceLength, confidenceThreshold, MIN_FRAMES]);
-
-
-  // Demo mode: disabled — no fake random predictions
-  const classifyDemo = useCallback((): GestureResult | null => {
-    // In demo mode (no model loaded), we don't generate fake predictions.
-    // The user should train and deploy a real model first.
-    return null;
-  }, []);
-
-  // Cleanup
-  useEffect(() => {
-    return () => {
-      modelRef.current?.dispose();
+    return {
+        loadModel,
+        pushFrame,
+        classify: isModelLoaded ? classify : classifyDemo,
+        isModelLoaded,
+        modelError,
+        modelInfo,
+        lastGesture,
+        bufferLength: bufferRef.current.length,
     };
-  }, []);
-
-  return {
-    loadModel,
-    pushFrame,
-    classify: isModelLoaded ? classify : classifyDemo,
-    isModelLoaded,
-    modelError,
-    modelInfo,
-    lastGesture,
-    bufferLength: bufferRef.current.length,
-  };
 }

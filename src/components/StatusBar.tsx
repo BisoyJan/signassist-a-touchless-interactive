@@ -44,10 +44,10 @@ export default function StatusBar({
             <div className="flex items-center gap-3">
                 <div
                     className={`w-3 h-3 rounded-full ${status === "error"
-                            ? "bg-red-500"
-                            : status === "ready"
-                                ? "bg-green-500 animate-pulse"
-                                : "bg-yellow-500 animate-pulse"
+                        ? "bg-red-500"
+                        : status === "ready"
+                            ? "bg-green-500 animate-pulse"
+                            : "bg-yellow-500 animate-pulse"
                         }`}
                 />
                 <span className={`text-sm font-medium ${statusInfo.color}`}>
@@ -90,11 +90,10 @@ export default function StatusBar({
             <div className="flex items-center gap-2">
                 <button
                     onClick={() => onToggleMode("sign")}
-                    className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
-                        mode === "sign"
+                    className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${mode === "sign"
                             ? "bg-green-600/30 text-green-300 border-green-500/50"
                             : "bg-th-surface-2/50 text-th-text-3 border-th-border-2/50 hover:bg-th-surface-3/50"
-                    }`}
+                        }`}
                     data-hand-nav
                     title="Motion-trained model (✊+👍)"
                 >
@@ -102,11 +101,10 @@ export default function StatusBar({
                 </button>
                 <button
                     onClick={() => onToggleMode("spelling")}
-                    className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
-                        mode === "spelling"
+                    className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${mode === "spelling"
                             ? "bg-sky-600/30 text-sky-300 border-sky-500/50"
                             : "bg-th-surface-2/50 text-th-text-3 border-th-border-2/50 hover:bg-th-surface-3/50"
-                    }`}
+                        }`}
                     data-hand-nav
                     title="Spelling mode (👍👍)"
                 >
@@ -114,11 +112,10 @@ export default function StatusBar({
                 </button>
                 <button
                     onClick={() => onToggleMode("navigate")}
-                    className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
-                        mode === "navigate"
+                    className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${mode === "navigate"
                             ? "bg-purple-600/30 text-purple-300 border-purple-500/50"
                             : "bg-th-surface-2/50 text-th-text-3 border-th-border-2/50 hover:bg-th-surface-3/50"
-                    }`}
+                        }`}
                     data-hand-nav
                     title="Navigation mode (✊✊)"
                 >
