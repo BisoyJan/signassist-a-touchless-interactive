@@ -11,8 +11,6 @@ interface StatusBarProps {
     isModelLoaded: boolean;
     modelError: string | null;
     modelInfo: string | null;
-    mode: InteractionMode;
-    onToggleMode: (target: InteractionMode) => void;
 }
 
 const STATUS_LABELS: Record<SystemStatus, { text: string; color: string }> = {
@@ -33,8 +31,6 @@ export default function StatusBar({
     isModelLoaded,
     modelError,
     modelInfo,
-    mode,
-    onToggleMode,
 }: StatusBarProps) {
     const statusInfo = STATUS_LABELS[status];
 
@@ -88,39 +84,6 @@ export default function StatusBar({
 
             {/* Right: Mode buttons + Language toggle + branding */}
             <div className="flex items-center gap-2">
-                <button
-                    onClick={() => onToggleMode("sign")}
-                    className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${mode === "sign"
-                            ? "bg-green-600/30 text-green-300 border-green-500/50"
-                            : "bg-th-surface-2/50 text-th-text-3 border-th-border-2/50 hover:bg-th-surface-3/50"
-                        }`}
-                    data-hand-nav
-                    title="Motion-trained model (✊+👍)"
-                >
-                    ✊👍 Motion
-                </button>
-                <button
-                    onClick={() => onToggleMode("spelling")}
-                    className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${mode === "spelling"
-                            ? "bg-sky-600/30 text-sky-300 border-sky-500/50"
-                            : "bg-th-surface-2/50 text-th-text-3 border-th-border-2/50 hover:bg-th-surface-3/50"
-                        }`}
-                    data-hand-nav
-                    title="Spelling mode (👍👍)"
-                >
-                    👍👍 Spelling
-                </button>
-                <button
-                    onClick={() => onToggleMode("navigate")}
-                    className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${mode === "navigate"
-                            ? "bg-purple-600/30 text-purple-300 border-purple-500/50"
-                            : "bg-th-surface-2/50 text-th-text-3 border-th-border-2/50 hover:bg-th-surface-3/50"
-                        }`}
-                    data-hand-nav
-                    title="Navigation mode (✊✊)"
-                >
-                    ✊✊ Navigate
-                </button>
                 <button
                     onClick={onToggleLanguage}
                     className="px-3 py-1 bg-th-surface-2 border border-th-border-2 rounded-lg text-sm text-th-fg hover:bg-th-surface-3 transition-colors"

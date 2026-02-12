@@ -137,6 +137,11 @@ export default function KioskPage() {
         return;
       }
 
+      // In navigate mode, ignore all other gestures (only mode switches allowed)
+      if (mode === "navigate") {
+        return;
+      }
+
       // Non-letter gesture → show confirmation (works in both sign & spelling modes)
       const text = getTranslation(result.label, language);
       setCurrentTranslation(text);
@@ -366,7 +371,42 @@ export default function KioskPage() {
         </div>
 
         {/* Translation panel — bottom/right 40% */}
-        <div className="flex-[2] min-h-0 bg-th-surface/50 rounded-xl border border-th-border">
+        <div className="flex-[2] min-h-0 bg-th-surface/50 rounded-xl border border-th-border relative">
+
+          {/* Top-right Mode Buttons (Red Box Area) */}
+          <div className="absolute top-4 right-4 z-20 flex flex-row gap-2">
+            <button
+                onClick={() => setModeManual("sign")}
+                className={`w-40 px-3 py-2 rounded-lg text-sm font-medium border transition-colors flex items-center justify-start gap-2 ${mode === "sign"
+                        ? "bg-green-600/30 text-green-300 border-green-500/50"
+                        : "bg-th-surface-2/50 text-th-text-3 border-th-border-2/50 hover:bg-th-surface-3/50"
+                    }`}
+                data-hand-nav
+            >
+                <span>✊👍</span> Motion
+            </button>
+            <button
+                onClick={() => setModeManual("spelling")}
+                className={`w-40 px-3 py-2 rounded-lg text-sm font-medium border transition-colors flex items-center justify-start gap-2 ${mode === "spelling"
+                        ? "bg-sky-600/30 text-sky-300 border-sky-500/50"
+                        : "bg-th-surface-2/50 text-th-text-3 border-th-border-2/50 hover:bg-th-surface-3/50"
+                    }`}
+                data-hand-nav
+            >
+                <span>👍👍</span> Spelling
+            </button>
+            <button
+                onClick={() => setModeManual("navigate")}
+                className={`w-40 px-3 py-2 rounded-lg text-sm font-medium border transition-colors flex items-center justify-start gap-2 ${mode === "navigate"
+                        ? "bg-purple-600/30 text-purple-300 border-purple-500/50"
+                        : "bg-th-surface-2/50 text-th-text-3 border-th-border-2/50 hover:bg-th-surface-3/50"
+                    }`}
+                data-hand-nav
+            >
+                <span>✊✊</span> Navigate
+            </button>
+          </div>
+
           <TranslationDisplay
             currentTranslation={currentTranslation}
             confidence={confidence}
@@ -412,8 +452,6 @@ export default function KioskPage() {
         isModelLoaded={isModelLoaded}
         modelError={modelError}
         modelInfo={modelInfo}
-        mode={mode}
-        onToggleMode={setModeManual}
       />
     </div>
   );
