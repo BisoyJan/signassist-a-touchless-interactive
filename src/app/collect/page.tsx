@@ -244,7 +244,7 @@ export default function CollectPage() {
     }, {});
 
     return (
-        <div className="min-h-screen bg-th-bg text-th-fg p-6 cursor-default">
+        <div className="h-screen overflow-y-auto bg-th-bg text-th-fg p-6 cursor-default">
             <div className="max-w-7xl mx-auto">
                 <h1 className="text-3xl font-bold mb-2">
                     📹 SignAssist — Data Collection
