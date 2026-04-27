@@ -6,13 +6,6 @@ import type { HandFrame, InteractionMode } from "@/types";
 /**
  * Detect "closed fist" — all five fingertips are BELOW (higher y)
  * their respective PIP/IP joints, meaning all fingers are curled.
- *
- * Landmark indices (MediaPipe):
- *   Thumb:  tip=4   ip=3
- *   Index:  tip=8   pip=6
- *   Middle: tip=12  pip=10
- *   Ring:   tip=16  pip=14
- *   Pinky:  tip=20  pip=18
  */
 function isClosedFist(hand: HandFrame): boolean {
     const lm = hand.landmarks;
@@ -48,8 +41,7 @@ function isThumbsUp(hand: HandFrame): boolean {
 
 /**
  * Identify which gesture combo is held with two hands:
- *   - Two fists        → "navigate"
- *   - Two thumbs up    → "spelling"
+ *   - Two thumbs up           → "spelling"
  *   - One fist + one thumbs up → "sign" (motion-trained model)
  */
 function detectGestureTarget(hands: HandFrame[]): InteractionMode | null {
@@ -60,7 +52,6 @@ function detectGestureTarget(hands: HandFrame[]): InteractionMode | null {
     const h0Thumb = isThumbsUp(hands[0]);
     const h1Thumb = isThumbsUp(hands[1]);
 
-    if (h0Fist && h1Fist) return "navigate";
     if (h0Thumb && h1Thumb) return "spelling";
     if ((h0Fist && h1Thumb) || (h0Thumb && h1Fist)) return "sign";
 

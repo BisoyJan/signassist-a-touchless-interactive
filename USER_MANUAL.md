@@ -79,10 +79,13 @@ npm run dev
 - Left panel: camera feed with landmark overlay
 - Right panel: live translation and conversation log
 - Top-right buttons: manual mode selection
+- Floating hand cursor: appears in Navigate Mode for touchless interaction
+- Spelling overlay: appears at top of screen in Spelling Mode showing accumulated letters
+- Speaking indicator: waveform animation shown while speech output is active
 - Bottom bar:
   - System status
   - Language toggle (EN/FIL)
-  - Theme toggle
+  - Theme toggle (light/dark, persisted across sessions)
 
 ### 6.3 Normal Translation Flow
 
@@ -103,9 +106,14 @@ SignAssist supports three interaction modes.
 
 ### 7.2 Spelling Mode
 
-- Purpose: build words letter-by-letter
-- Letters are added when the letter handshape is held steadily
-- Word auto-finalizes after short inactivity
+- Purpose: build words letter-by-letter using ASL/FSL fingerspelling handshapes
+- A letter is accepted after it is detected consistently (held steadily for a brief moment)
+- There is a short debounce (~1.2 seconds) between consecutive letters to prevent duplicates from a held pose
+- The word auto-finalizes after approximately 3 seconds of no new letter input
+- A spelling overlay appears at the top of the screen showing:
+  - Accumulated letter boxes with a blinking cursor
+  - A countdown timer before auto-finalize
+  - Optional notice messages for feedback
 - Buttons available in the spelling overlay:
   - Undo: remove last letter
   - Cancel: discard current word
@@ -113,9 +121,16 @@ SignAssist supports three interaction modes.
 
 ### 7.3 Navigate Mode
 
-- Purpose: touchless cursor control
-- A virtual cursor appears
-- Pinch gesture acts like click on interactive UI buttons
+- Purpose: touchless cursor control using hand position
+- A floating virtual cursor tracks the position of your index finger
+- The cursor smoothly follows your hand movement across the screen
+- Pinch gesture (bring thumb and index finger together) acts as a click
+- There is a short cooldown between consecutive clicks to prevent accidental repeats
+- Cursor appearance changes based on state:
+  - Default: white ring
+  - Hovering over a button: yellow ring (larger)
+  - Pinching/clicking: green ring (smaller)
+- Interactive buttons must have the `data-hand-nav` attribute to be clickable
 
 ## 8. Gesture-Based Mode Switching
 
@@ -152,7 +167,8 @@ Note:
 
 ### 10.2 Theme Toggle
 
-- Use theme toggle in the bottom bar to change visual theme.
+- Use theme toggle in the bottom bar to switch between light and dark themes.
+- Your theme preference is saved in the browser and persists across sessions.
 
 ### 10.3 Camera Toggle
 
@@ -280,9 +296,11 @@ npx serve out
 
 ### 14.3 Spelling Mode Not Adding Letters
 
-- Hold each letter steadily until accepted
-- Avoid rapid repeated motion
-- Use Confirm to finish a word manually if needed
+- Hold each letter handshape steadily until the overlay shows the letter is accepted
+- There is a ~1.2 second debounce between letters — wait briefly before showing the next letter
+- Avoid rapid repeated motion; the system requires consistent detection before accepting
+- If the word auto-finalizes too quickly, finalize manually using the Confirm button
+- Use Undo to remove the last letter if a wrong letter was detected
 
 ### 14.4 No Speech Output
 

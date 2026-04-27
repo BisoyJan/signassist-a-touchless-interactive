@@ -87,7 +87,6 @@ export default function StatusBar({
                 <button
                     onClick={onToggleLanguage}
                     className="px-3 py-1 bg-th-surface-2 border border-th-border-2 rounded-lg text-sm text-th-fg hover:bg-th-surface-3 transition-colors"
-                    data-hand-nav
                 >
                     {language === "en" ? "🇺🇸 EN" : "🇵🇭 FIL"}
                 </button>

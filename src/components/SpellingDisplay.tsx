@@ -81,7 +81,6 @@ export default function SpellingDisplay({
                             onClick={onDeleteLast}
                             className="px-3 py-1.5 text-xs bg-yellow-500/15 text-yellow-400 border border-yellow-500/30 rounded-lg hover:bg-yellow-500/25 transition-colors"
                             title="Delete last letter"
-                            data-hand-nav
                         >
                             ⌫ Undo
                         </button>
@@ -89,7 +88,6 @@ export default function SpellingDisplay({
                             onClick={onCancel}
                             className="px-3 py-1.5 text-xs bg-red-500/15 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/25 transition-colors"
                             title="Discard word"
-                            data-hand-nav
                         >
                             ✕ Cancel
                         </button>
@@ -97,7 +95,6 @@ export default function SpellingDisplay({
                             onClick={onFinalize}
                             className="px-3 py-1.5 text-xs bg-green-500/15 text-green-400 border border-green-500/30 rounded-lg hover:bg-green-500/25 transition-colors"
                             title="Confirm word"
-                            data-hand-nav
                         >
                             ✓ Confirm
                         </button>

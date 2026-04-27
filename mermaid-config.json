@@ -1,0 +1,8 @@
+{
+    "puppeteerConfig": {
+        "args": [
+            "--no-sandbox"
+        ]
+    },
+    "pdfFit": true
+}

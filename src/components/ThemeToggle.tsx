@@ -18,7 +18,6 @@ export default function ThemeToggle() {
         <button
             onClick={toggleTheme}
             className="px-3 py-1 bg-th-surface-2 border border-th-border-2 rounded-lg text-sm text-th-fg hover:bg-th-surface-3 transition-colors"
-            data-hand-nav
             title="Toggle theme"
         >
             {label}

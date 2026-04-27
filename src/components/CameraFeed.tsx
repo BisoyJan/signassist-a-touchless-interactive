@@ -87,7 +87,6 @@ export default function CameraFeed({
                             ? "bg-red-600/80 hover:bg-red-600 border-red-500 text-white"
                             : "bg-green-600/80 hover:bg-green-600 border-green-500 text-white"
                         }`}
-                    data-hand-nav
                 >
                     {cameraEnabled ? "⏹ Turn Off Camera" : "▶ Turn On Camera"}
                 </button>

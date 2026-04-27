@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useCallback, useEffect, useState } from "react";
-import { useHandTracker, useGestureClassifier, useSpeechOutput, useWordBuilder, useHandNavigation, useModeSwitcher } from "@/hooks";
+import { useHandTracker, useGestureClassifier, useSpeechOutput, useWordBuilder, useModeSwitcher } from "@/hooks";
 import {
   CameraFeed,
   TranslationDisplay,
@@ -9,7 +9,6 @@ import {
   StatusBar,
   SpeakingIndicator,
   SpellingDisplay,
-  HandCursor,
 } from "@/components";
 import { getTranslation, DEFAULT_CONFIG } from "@/config";
 import type { SystemStatus, TranslationEntry, HandFrame } from "@/types";
@@ -71,16 +70,12 @@ export default function KioskPage() {
     cancelWord,
   } = useWordBuilder({ onWordComplete });
 
-  // ── Mode switcher (3 modes: sign / spelling / navigate) ──
+  // ── Mode switcher (2 modes: sign / spelling) ────────────
   const { mode, setModeManual, checkModeGesture, holdProgress, isHolding, holdTarget } = useModeSwitcher();
 
   const onGestureDetected = useCallback(
     (result: { label: string; confidence: number; source: string }) => {
-      // ── Mode-switching gestures (from LSTM) ─────────────
-      if (result.label === "mode_navigate") {
-        if (mode !== "navigate") setModeManual("navigate");
-        return;
-      }
+      // ── Mode-switching gestures (from LSTM) ───────────
       if (result.label === "mode_spelling") {
         if (mode !== "spelling") setModeManual("spelling");
         return;
@@ -137,12 +132,7 @@ export default function KioskPage() {
         return;
       }
 
-      // In navigate mode, ignore all other gestures (only mode switches allowed)
-      if (mode === "navigate") {
-        return;
-      }
-
-      // Non-letter gesture → show confirmation (works in both sign & spelling modes)
+      // Non-letter gesture → show confirmation (sign mode)
       const text = getTranslation(result.label, language);
       setCurrentTranslation(text);
       setConfidence(result.confidence);
@@ -165,9 +155,6 @@ export default function KioskPage() {
     confidenceThreshold: DEFAULT_CONFIG.confidenceThreshold,
     onGestureDetected,
   });
-
-  // ── Hand navigation (touchless cursor + pinch click) ────
-  const { cursor, cursorDomRef, updateFromHands: updateNav } = useHandNavigation();
 
   // Cancel any in-progress spelling when leaving spelling mode
   useEffect(() => {
@@ -199,22 +186,10 @@ export default function KioskPage() {
       checkModeGesture(hands);
 
       // Always feed frames to the LSTM buffer so it can detect mode gestures
-      // even while navigating or spelling.
+      // even while spelling.
       // NOTE: Always call pushFrame — even with empty hands — so the buffer
       // can be cleared after a gap (noHandCount logic inside pushFrame).
       pushFrame(hands);
-
-      // In navigate mode → update cursor
-      if (mode === "navigate") {
-        updateNav(hands, true);
-        if (status !== "confirming" && status !== "speaking") {
-          setStatus(hands.length > 0 ? "detecting" : "ready");
-        }
-        return;
-      }
-
-      // In sign or spelling mode → hide cursor
-      updateNav([], false);
 
       if (status === "confirming" || status === "speaking") return;
 
@@ -224,7 +199,7 @@ export default function KioskPage() {
       // During spelling, stay in "detecting" so the classifier keeps running
       setStatus(hands.length > 0 ? "detecting" : (isSpelling ? "detecting" : "ready"));
     },
-    [pushFrame, status, isSpelling, updateNav, mode, checkModeGesture, isHolding]
+    [pushFrame, status, isSpelling, checkModeGesture, isHolding]
   );
 
   const {
@@ -345,7 +320,6 @@ export default function KioskPage() {
           <button
             onClick={() => window.location.reload()}
             className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-500 transition-colors"
-            data-hand-nav
           >
             Retry
           </button>
@@ -381,7 +355,6 @@ export default function KioskPage() {
                         ? "bg-green-600/30 text-green-300 border-green-500/50"
                         : "bg-th-surface-2/50 text-th-text-3 border-th-border-2/50 hover:bg-th-surface-3/50"
                     }`}
-                data-hand-nav
             >
                 <span>✊👍</span> Motion
             </button>
@@ -391,19 +364,8 @@ export default function KioskPage() {
                         ? "bg-sky-600/30 text-sky-300 border-sky-500/50"
                         : "bg-th-surface-2/50 text-th-text-3 border-th-border-2/50 hover:bg-th-surface-3/50"
                     }`}
-                data-hand-nav
             >
                 <span>👍👍</span> Spelling
-            </button>
-            <button
-                onClick={() => setModeManual("navigate")}
-                className={`w-40 px-3 py-2 rounded-lg text-sm font-medium border transition-colors flex items-center justify-start gap-2 ${mode === "navigate"
-                        ? "bg-purple-600/30 text-purple-300 border-purple-500/50"
-                        : "bg-th-surface-2/50 text-th-text-3 border-th-border-2/50 hover:bg-th-surface-3/50"
-                    }`}
-                data-hand-nav
-            >
-                <span>✊✊</span> Navigate
             </button>
           </div>
 
@@ -440,8 +402,32 @@ export default function KioskPage() {
       {/* Speaking indicator */}
       <SpeakingIndicator isSpeaking={isSpeaking} />
 
-      {/* Hand cursor overlay */}
-      <HandCursor cursor={cursor} mode={mode} holdProgress={holdProgress} holdTarget={holdTarget} cursorDomRef={cursorDomRef} />
+      {/* Mode-switch hold progress */}
+      {holdProgress > 0 && holdTarget && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none flex flex-col items-center gap-2" aria-hidden="true">
+          <div className="relative w-16 h-16">
+            <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
+              <circle cx="32" cy="32" r="28" fill="none" stroke="var(--color-th-border)" strokeWidth="4" />
+              <circle
+                cx="32" cy="32" r="28"
+                fill="none"
+                stroke={holdTarget === "spelling" ? "#38bdf8" : "#22c55e"}
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeDasharray={2 * Math.PI * 28}
+                strokeDashoffset={2 * Math.PI * 28 * (1 - holdProgress)}
+                className="transition-all duration-100"
+              />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-lg">
+              {holdTarget === "spelling" ? "👍👍" : "✊👍"}
+            </span>
+          </div>
+          <span className={`text-xs ${holdTarget === "spelling" ? "text-sky-300" : "text-green-300"} bg-th-surface/80 px-2 py-0.5 rounded`}>
+            Switch to {holdTarget === "spelling" ? "Spelling Mode" : "Motion Model Mode"}
+          </span>
+        </div>
+      )}
 
       {/* Status bar */}
       <StatusBar

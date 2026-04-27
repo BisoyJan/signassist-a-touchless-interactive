@@ -2,8 +2,8 @@
 // SignAssist — Core Type Definitions
 // ============================================================
 
-/** Interaction mode: motion-trained model, spelling, or hand navigation. */
-export type InteractionMode = "sign" | "spelling" | "navigate";
+/** Interaction mode: motion-trained model or fingerspelling. */
+export type InteractionMode = "sign" | "spelling";
 
 /** A single hand landmark (21 per hand, from MediaPipe). */
 export interface Landmark {

@@ -87,7 +87,6 @@ export const SIGN_VOCABULARY: SignVocabularyItem[] = [
     { id: "letter_z", label: "letter_z", textEn: "Z", textFil: "Z", category: "letter" },
 
     // Mode-switching gestures (two-hand)
-    { id: "mode_navigate", label: "mode_navigate", textEn: "Navigate Mode", textFil: "Navigation", category: "mode" },
     { id: "mode_spelling", label: "mode_spelling", textEn: "Spelling Mode", textFil: "Spelling", category: "mode" },
     { id: "mode_sign", label: "mode_sign", textEn: "Motion Model Mode", textFil: "Motion Model", category: "mode" },
 ];
