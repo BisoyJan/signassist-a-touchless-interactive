@@ -306,13 +306,12 @@ def _manual_export_tfjs(model: "tf.keras.Model", output_dir: Path):
     weight_specs = []
 
     for layer in model.layers:
-        layer_name = layer.name
         for w in layer.weights:
-            # For Bidirectional layers, prefix with layer name
-            if isinstance(layer, tf.keras.layers.Bidirectional):
-                full_name = f"{layer_name}/{w.path}"
-            else:
-                full_name = w.path
+            # In Keras 3, w.path is already the full model-rooted path
+            # (e.g. "sequential/bidirectional/forward_lstm/lstm_cell/kernel").
+            # Do NOT add an extra layer-name prefix — _patch_model_json will
+            # strip the model-name prefix and rewrite the LSTM names for TF.js.
+            full_name = w.path
 
             arr = w.numpy().astype(np.float32)
             weight_specs.append({

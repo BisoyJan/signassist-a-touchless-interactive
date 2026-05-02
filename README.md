@@ -118,6 +118,13 @@ python extract_from_video.py --videos_dir ./videos
 python extract_from_video.py --videos_dir ./videos --augment
 ```
 
+Or run from the **project root** (Git Bash / PowerShell):
+
+```bash
+source training/.venv/Scripts/activate
+python training/extract_from_video.py --videos_dir ./training/videos --augment
+```
+
 This outputs a JSON file to `training/data/video_samples.json` in the same format as the `/collect` page, so both sources are combined automatically during training.
 
 Recording tips:
@@ -130,20 +137,22 @@ Recording tips:
 
 ```bash
 cd training
+py -3.12 -m venv .venv       # Windows — requires Python 3.12 installed
+.venv\Scripts\activate        # Windows CMD  (use Activate.ps1 for PowerShell)
 pip install -r requirements.txt
-# Place your collected JSON files and/or video-extracted samples in training/data/
+# Place your collected JSON files and/or video-extracted samples in data/
 python train_model.py
 ```
 
-If you use Git Bash on Windows, you can also run training from the project root:
+Or from the **project root** (Git Bash / PowerShell):
 ```bash
 source training/.venv/Scripts/activate
 python training/train_model.py
 ```
 
 Python notes:
-- Use Python 3.10–3.12 for best TensorFlow compatibility.
-- Consider creating a virtual environment (`python -m venv .venv`) before installing requirements.
+- **Python 3.10–3.12 is required.** Python 3.13+ is NOT supported — TensorFlow has no wheels for it.
+- Always activate the virtual environment before running any training command.
 
 The script will:
 - Load all sample files from `training/data/`

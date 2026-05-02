@@ -178,7 +178,7 @@ IMPORTANT (Camera / Browser Security)
 
   3. Extract hand landmarks from the videos:
 
-     python training/extract_from_video.py --videos_dir ./videos
+     python training/extract_from_video.py --videos_dir ./training/videos
 
      This uses MediaPipe to detect hand landmarks in every video frame,
      builds sliding-window sequences (30 frames, 50% overlap), and outputs
@@ -194,7 +194,7 @@ IMPORTANT (Camera / Browser Security)
 
      Example with augmentation:
 
-       python training/extract_from_video.py --videos_dir ./videos --augment
+       python training/extract_from_video.py --videos_dir ./training/videos --augment
 
   4. Train the model (same as Step 6a):
 
