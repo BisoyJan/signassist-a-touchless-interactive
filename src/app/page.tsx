@@ -84,6 +84,10 @@ export default function KioskPage() {
         if (mode !== "sign") setModeManual("sign");
         return;
       }
+      if (result.label === "mode_navigate") {
+        // Navigation mode is planned but not fully implemented. Ignore to prevent raw label display.
+        return;
+      }
 
       // ── Letters are only handled in spelling mode ───────
       if (result.label.startsWith("letter_")) {

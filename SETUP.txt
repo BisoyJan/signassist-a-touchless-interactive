@@ -7,7 +7,11 @@ PREREQUISITES
 --------------------------------------------------------------------------------
   - Node.js >= 18 (recommended: 20 LTS or later)
   - npm (comes with Node.js)
-  - Python >= 3.10 (for model training only)
+  - Python 3.10 - 3.12 (for model training only)
+      NOTE: Python 3.13+ is NOT supported. TensorFlow 2.15 (required by
+      tensorflowjs) has no wheels for Python 3.13. Install Python 3.12:
+        winget install Python.Python.3.12
+      Or download: https://www.python.org/downloads/release/python-3120/
   - Git
   - A webcam (for live gesture recognition and data collection)
   - Google Chrome (recommended for kiosk deployment)
@@ -80,9 +84,13 @@ IMPORTANT (Camera / Browser Security)
 
      cd training
 
-  b) Create a virtual environment:
+  b) Create a virtual environment (MUST use Python 3.10 - 3.12):
 
-     python -m venv .venv
+     Windows (if Python 3.12 is installed via py launcher):
+       py -3.12 -m venv .venv
+
+     Otherwise (only if `python --version` reports 3.10 - 3.12):
+       python -m venv .venv
 
   c) Activate the virtual environment:
 

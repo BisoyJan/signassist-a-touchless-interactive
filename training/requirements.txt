@@ -1,6 +1,6 @@
 # SignAssist Training Dependencies
-tensorflow>=2.15.0
-tensorflowjs>=4.17.0
+# Python 3.12 users: TF 2.16+ is used automatically
+tensorflow>=2.16.0,<3.0.0
 numpy>=1.24.0
 scikit-learn>=1.3.0
 
