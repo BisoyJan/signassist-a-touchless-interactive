@@ -6,13 +6,13 @@ import { useRef, useCallback, useState, useEffect } from "react";
  * Seconds of silence (no new letter) before the word is auto-finalized.
  * The user can also finalize early by showing a "done" gesture.
  */
-const AUTO_FINALIZE_DELAY = 3;
+const AUTO_FINALIZE_DELAY = 1.5;
 
 /**
  * Minimum gap between accepting two consecutive letters (ms).
  * Prevents the same held pose from adding duplicate letters.
  */
-const MIN_LETTER_GAP_MS = 1200;
+const MIN_LETTER_GAP_MS = 800;
 
 interface UseWordBuilderOptions {
     /**

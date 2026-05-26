@@ -6,7 +6,7 @@ import type { SignAssistConfig, SignVocabularyItem } from "@/types";
 export const DEFAULT_CONFIG: SignAssistConfig = {
     confidenceThreshold: 0.45,
     sequenceLength: 30, // 30 frames ≈ 1 second at 30 fps
-    confirmationDelay: 2, // seconds
+    confirmationDelay: 1, // seconds
     language: "en",
     speechRate: 0.9,
     handDetectionConfidence: 0.4, // lowered for dim lighting
